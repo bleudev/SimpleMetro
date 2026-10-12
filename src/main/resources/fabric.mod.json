@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "simplemetro",
+  "version": "${version}",
+  "name": "SimpleMetro",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/simplemetro/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "com.bleudev.simplemetro.client.SimplemetroDataGenerator"
+    ],
+    "client": [
+      "com.bleudev.simplemetro.client.SimplemetroClient"
+    ],
+    "main": [
+      "com.bleudev.simplemetro.Simplemetro"
+    ]
+  },
+  "mixins": [
+    "simplemetro.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-language-kotlin": ">=${kotlin_loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
