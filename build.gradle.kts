@@ -55,6 +55,7 @@ dependencies {
     implementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
 
     implementation("maven.modrinth:xaeros-world-map:${project.property("xaeros_world_map")}")
+    implementation("maven.modrinth:xaeros-minimap:${project.property("xaeros_minimap")}")
 }
 
 tasks.processResources {

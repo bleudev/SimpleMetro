@@ -6,6 +6,8 @@
   "mixins": [
   ],
   "client": [
+    "client.accessor.xaero.GuiMapAccessor",
+    "client.xaero.GuiMapMixin"
   ],
   "injectors": {
     "defaultRequire": 1

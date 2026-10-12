@@ -11,13 +11,13 @@
   "environment": "*",
   "entrypoints": {
     "fabric-datagen": [
-      "com.bleudev.simplemetro.client.SimplemetroDataGenerator"
+      "com.bleudev.simplemetro.datagen.SMetroDataGen"
     ],
     "client": [
-      "com.bleudev.simplemetro.client.SimplemetroClient"
+      "com.bleudev.simplemetro.client.SMetroClient"
     ],
     "main": [
-      "com.bleudev.simplemetro.Simplemetro"
+      "com.bleudev.simplemetro.SMetro"
     ]
   },
   "mixins": [
