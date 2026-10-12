@@ -6,7 +6,6 @@ import com.bleudev.simplemetro.obj.MetroStation
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.core.BlockPos
-import net.minecraft.network.chat.TextColor
 import net.minecraft.util.ARGB
 import xaero.map.gui.GuiMap
 import java.lang.reflect.Modifier
@@ -16,16 +15,20 @@ import kotlin.math.roundToInt
 
 class MetroSchemeRenderer private constructor() {
     private val stations: List<MetroStation> = listOf(
-        MetroStation(1, 1, BlockPos(0, 100, 0), "Грибная"),
-        MetroStation(2, 1, BlockPos(100, 100, 50), "Портальная"),
-        MetroStation(3, 1, BlockPos(150, 100, 50), "Какая-та еще"),
-        MetroStation(4, 2, BlockPos(100, 100, 0), "Вафельная"),
-        MetroStation(5, 2, BlockPos(75, 100, 150), "Вишнево"),
-        MetroStation(6, 2, BlockPos(100, 100, 60), "Портальная"),
+        MetroStation(1, BlockPos(-50, 100, -50), "Грибная", listOf()),
+        MetroStation(2, BlockPos(0, 100, 0), "Вишнево", listOf(7)),
+        MetroStation(3, BlockPos(100, 100, 0), "Архипелаг Вафля", listOf()),
+        MetroStation(4, BlockPos(150, 100, 60), "Портальная", listOf()),
+
+        MetroStation(5, BlockPos(0, 100, -100), "Привет", listOf()),
+        MetroStation(6, BlockPos(25, 100, 150), "Вафельная", listOf()),
+        MetroStation(7, BlockPos(0, 100, 10), "Вишневская", listOf()),
+        MetroStation(8, BlockPos(0, 100, 100), "Конечная", listOf()),
     )
     private val lines: List<MetroLine> = listOf(
-        MetroLine(1, "Грибно-портальная ветка", TextColor.BLUE, listOf(1, 2, 3)),
-        MetroLine(2, "Вафельная ветка", TextColor.GOLD, listOf(4, 6, 5)),
+        MetroLine(1, "Грибно-портальная ветка", 0x0000ff, listOf(1, 2, 3, 4)),
+        MetroLine(2, "Вафельная ветка", 0xff5500, listOf(5, 3, 6)),
+        MetroLine(3, "Ахуительная ветка", 0xff0000, listOf(7, 8)),
     )
 
     private var needsRebuild: Boolean = true
@@ -39,12 +42,19 @@ class MetroSchemeRenderer private constructor() {
             connectionRenderStates.clear()
 
             val lmap = lines.associateBy { it.id }
-            for ((id, lineId, pos, name) in stations) {
-                stationRenderStates[id] = StationRenderState(pos, name, lmap[lineId]!!.color, lineId)
+            for ((id, pos, name, transfers) in stations) {
+                stationRenderStates[id] = StationRenderState(pos, name, listOf(), listOf(), transfers)
             }
-            for ((_, _, color, stations) in lmap.values) {
-                for ((pr, cr) in stations.zipWithNext()) {
-                    connectionRenderStates.add(ConnectionRenderState(stationRenderStates[pr]!!.pos, stationRenderStates[cr]!!.pos, color))
+            for (line in lmap.values) {
+                for ((cr, nx) in line.stations.zipWithNext()) {
+                    connectionRenderStates.add(ConnectionRenderState(stationRenderStates[cr]!!.pos, stationRenderStates[nx]!!.pos, line.color))
+
+                    for (tr in stationRenderStates[cr]!!.transfers) {
+                        connectionRenderStates.add(ConnectionRenderState(stationRenderStates[cr]!!.pos, stationRenderStates[tr]!!.pos, 0x555555))
+                    }
+
+                    stationRenderStates[cr] = stationRenderStates[cr]!!.addLine(line)
+                    stationRenderStates[nx] = stationRenderStates[nx]!!.addLine(line)
                 }
             }
         }
@@ -86,15 +96,33 @@ class MetroSchemeRenderer private constructor() {
     }
 
     private fun drawStation(extractor: GuiGraphicsExtractor, station: StationRenderState, drawX: Float, drawY: Float, pixelScale: Double) {
+        if (station.lines.isEmpty() || station.argbColors.isEmpty()) return
+
         extractor.pose().pushMatrix()
         extractor.pose().translate(drawX, drawY)
-        extractor.fill(-4, -4, 4, 4, station.argbColor)
+
+        // Support for only 4 colors, sorry
+        extractor.fill(-4, -4, 4, 4, station.argbColors[0])
+        if (station.lines.size > 1) {
+            extractor.fill(-4, 0, 4, 4, station.argbColors[1])
+            if (station.lines.size > 2) {
+                extractor.fill(-4, 0, 0, 4, station.argbColors[2])
+                if (station.lines.size > 3) {
+                    extractor.fill(-4, -4, 0, 0, station.argbColors[3])
+                }
+            }
+        }
+
 
         extractor.pose().pushMatrix()
         extractor.pose().scale(.75f)
         val alpha = ((pixelScale - 7.5) / 1.5).coerceIn(0.0, 1.0).toFloat()
-        extractor.centeredText(Minecraft.getInstance().font, station.lineId.toString(), 0, -4, ARGB.color(alpha, 0xffffff))
-        extractor.centeredText(Minecraft.getInstance().font, station.name, 0, 8, ARGB.srgbLerp(alpha, ARGB.color(0f, station.argbColor), station.argbColor))
+        if (station.lines.size == 1) {
+            extractor.centeredText(Minecraft.getInstance().font, station.lines[0].toString(), 0, -4, ARGB.color(alpha, 0xffffff))
+            extractor.centeredText(Minecraft.getInstance().font, station.name, 0, 8, ARGB.srgbLerp(alpha, ARGB.color(0f, station.argbColors[0]), station.argbColors[0]))
+        } else {
+            extractor.centeredText(Minecraft.getInstance().font, station.name, 0, 8, ARGB.srgbLerp(alpha, ARGB.color(0f, station.whiteColor), station.whiteColor))
+        }
         extractor.pose().popMatrix()
 
         extractor.pose().popMatrix()
@@ -110,7 +138,7 @@ class MetroSchemeRenderer private constructor() {
         extractor.pose().pushMatrix()
         extractor.pose().translate(drawX1, drawY1)
         extractor.pose().rotate(acos(dx / len))
-        extractor.fill(-2, -2, len.roundToInt() + 2, 2, ARGB.color(.9f, connection.color.value))
+        extractor.fill(-2, -2, len.roundToInt() + 2, 2, connection.argbColor)
         extractor.pose().popMatrix()
     }
 
@@ -146,8 +174,18 @@ class MetroSchemeRenderer private constructor() {
         }
     }
 
-    private data class StationRenderState(val pos: BlockPos, val name: String, val color: TextColor, val lineId: Int) {
-        val argbColor: Int get() = ARGB.color(.9f, color.value)
+    private data class StationRenderState(val pos: BlockPos, val name: String, val colors: List<Int>, val lines: List<Int>, val transfers: List<Int>) {
+        val argbColors: List<Int> get() = colors.map { ARGB.color(.9f, it) }
+        val whiteColor: Int get() = ARGB.color(.9f, 0xffffff)
+
+        fun addLine(line: MetroLine): StationRenderState = StationRenderState(
+            pos, name,
+            HashSet(colors).apply { add(line.color) }.toList(),
+            HashSet(lines).apply { add(line.id) }.toList(),
+            transfers
+        )
     }
-    private data class ConnectionRenderState(val pos1: BlockPos, val pos2: BlockPos, val color: TextColor)
+    private data class ConnectionRenderState(val pos1: BlockPos, val pos2: BlockPos, val color: Int) {
+        val argbColor: Int get() = ARGB.color(.8f, color)
+    }
 }
