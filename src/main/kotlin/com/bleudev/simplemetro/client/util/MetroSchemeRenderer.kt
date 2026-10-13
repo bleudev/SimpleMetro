@@ -1,36 +1,23 @@
 package com.bleudev.simplemetro.client.util
 
+import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.mixin.client.accessor.xaero.GuiMapAccessor
 import com.bleudev.simplemetro.obj.MetroLine
-import com.bleudev.simplemetro.obj.MetroStation
+import net.fabricmc.api.EnvType
+import net.fabricmc.api.Environment
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.core.BlockPos
 import net.minecraft.util.ARGB
 import xaero.map.gui.GuiMap
 import java.lang.reflect.Modifier
-import kotlin.math.acos
+import kotlin.math.PI
+import kotlin.math.atan
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
+@Environment(EnvType.CLIENT)
 class MetroSchemeRenderer private constructor() {
-    private val stations: List<MetroStation> = listOf(
-        MetroStation(1, BlockPos(-50, 100, -50), "Грибная", listOf()),
-        MetroStation(2, BlockPos(0, 100, 0), "Вишнево", listOf(7)),
-        MetroStation(3, BlockPos(100, 100, 0), "Архипелаг Вафля", listOf()),
-        MetroStation(4, BlockPos(150, 100, 60), "Портальная", listOf()),
-
-        MetroStation(5, BlockPos(0, 100, -100), "Привет", listOf()),
-        MetroStation(6, BlockPos(25, 100, 150), "Вафельная", listOf()),
-        MetroStation(7, BlockPos(0, 100, 10), "Вишневская", listOf()),
-        MetroStation(8, BlockPos(0, 100, 100), "Конечная", listOf()),
-    )
-    private val lines: List<MetroLine> = listOf(
-        MetroLine(1, "Грибно-портальная ветка", 0x0000ff, listOf(1, 2, 3, 4)),
-        MetroLine(2, "Вафельная ветка", 0xff5500, listOf(5, 3, 6)),
-        MetroLine(3, "Ахуительная ветка", 0xff0000, listOf(7, 8)),
-    )
-
     private var needsRebuild: Boolean = true
     private val stationRenderStates = hashMapOf<Int, StationRenderState>()
     private val connectionRenderStates = arrayListOf<ConnectionRenderState>()
@@ -41,8 +28,8 @@ class MetroSchemeRenderer private constructor() {
             stationRenderStates.clear()
             connectionRenderStates.clear()
 
-            val lmap = lines.associateBy { it.id }
-            for ((id, pos, name, transfers) in stations) {
+            val lmap = SMetroInfo.getInstance().lines.associateBy { it.id }
+            for ((id, pos, name, transfers) in SMetroInfo.getInstance().stations) {
                 stationRenderStates[id] = StationRenderState(pos, name, listOf(), listOf(), transfers)
             }
             for (line in lmap.values) {
@@ -58,6 +45,10 @@ class MetroSchemeRenderer private constructor() {
                 }
             }
         }
+    }
+
+    fun onUpdate() {
+        needsRebuild = true
     }
 
     fun extractRenderState(map: GuiMap, extractor: GuiGraphicsExtractor) {
@@ -82,13 +73,16 @@ class MetroSchemeRenderer private constructor() {
                 val drawY = (z - cameraZ) * scale + height / 2
                 return drawX.toFloat() to drawY.toFloat()
             }
+            fun doNotCull(drawX: Float, drawY: Float): Boolean {
+                return !(drawX < -10.0) && !(drawY < -10.0) && !(drawX > (width + 10)) && !(drawY > (height + 10))
+            }
 
             for (connection in connectionRenderStates) {
                 drawConnection(extractor, connection, ::drawCoords)
             }
             for (station in stationRenderStates.values) {
                 val (drawX, drawY) = drawCoords(station.pos.x, station.pos.z)
-                if (!(drawX < -10.0) && !(drawY < -10.0) && !(drawX > (width + 10)) && !(drawY > (height + 10))) {
+                if (doNotCull(drawX, drawY)) {
                     drawStation(extractor, station, drawX, drawY, pixelScale)
                 }
             }
@@ -129,16 +123,27 @@ class MetroSchemeRenderer private constructor() {
     }
 
     private fun drawConnection(extractor: GuiGraphicsExtractor, connection: ConnectionRenderState, drawCoords: (Int, Int) -> Pair<Float, Float>) {
-        val (drawX1, drawY1) = drawCoords(connection.pos1.x, connection.pos1.z)
-        val (drawX2, drawY2) = drawCoords(connection.pos2.x, connection.pos2.z)
+        val x1 = connection.pos1.x
+        val z1 = connection.pos1.z
+        val x2 = connection.pos2.x
+        val z2 = connection.pos2.z
+        val col = connection.argbColor
+
+        val (drawX1, drawY1) = drawCoords(x1, z1)
+        val (drawX2, drawY2) = drawCoords(x2, z2)
+
         val dx = drawX2 - drawX1
         val dy = drawY2 - drawY1
         val len = hypot(dx, dy)
 
         extractor.pose().pushMatrix()
-        extractor.pose().translate(drawX1, drawY1)
-        extractor.pose().rotate(acos(dx / len))
-        extractor.fill(-2, -2, len.roundToInt() + 2, 2, connection.argbColor)
+        if (dx > 0 || (dx == 0f && dy > 0)) {
+            extractor.pose().translate(drawX1, drawY1)
+        } else {
+            extractor.pose().translate(drawX2, drawY2)
+        }
+        extractor.pose().rotate(if (dx == 0f) PI.toFloat()/2 else atan(dy / dx)) // No zero division error!
+        extractor.fill(-2, -2, len.roundToInt() + 2, 2, col)
         extractor.pose().popMatrix()
     }
 

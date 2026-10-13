@@ -16,6 +16,9 @@
     "client": [
       "com.bleudev.simplemetro.client.SMetroClient"
     ],
+    "server": [
+      "com.bleudev.simplemetro.server.SMetroServer"
+    ],
     "main": [
       "com.bleudev.simplemetro.SMetro"
     ]

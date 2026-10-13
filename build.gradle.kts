@@ -4,6 +4,7 @@ import java.net.URI
 
 plugins {
     kotlin("jvm") version "2.4.21"
+    kotlin("plugin.serialization") version "2.4.21"
     id("net.fabricmc.fabric-loom") version "1.18.4"
     id("maven-publish")
 }
@@ -44,6 +45,10 @@ repositories {
             includeGroup("maven.modrinth")
         }
     }
+    exclusiveContent {
+        forRepository { maven("https://maven.quiltmc.org/repository/release") }
+        filter { includeGroupAndSubgroups("org.quiltmc") }
+    }
 }
 
 dependencies {
@@ -56,6 +61,9 @@ dependencies {
 
     implementation("maven.modrinth:xaeros-world-map:${project.property("xaeros_world_map")}")
     implementation("maven.modrinth:xaeros-minimap:${project.property("xaeros_minimap")}")
+
+    implementation("org.quiltmc.parsers:gson:0.3.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 }
 
 tasks.processResources {
