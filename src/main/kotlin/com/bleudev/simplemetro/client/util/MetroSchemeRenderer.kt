@@ -144,7 +144,7 @@ class MetroSchemeRenderer private constructor() {
             lines.add(StationLineNameTooltipComponent(id, name, color))
         }
         lines.add(ColoredTooltipComponent("", -1)) // space
-        lines.add(ClientTextTooltip(Component.literal("Id: ${station.id}").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC).visualOrderText))
+        lines.add(ClientTextTooltip(Component.translatable("xaero.map.station.tooltip.id", station.id).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC).visualOrderText))
 
         tooltip(Minecraft.getInstance().font, lines.toList(), 0, 0, DefaultTooltipPositioner.INSTANCE, null, true)
     }

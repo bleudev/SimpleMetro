@@ -45,9 +45,9 @@ object MClientCommand {
                                     ctx.getArgument("pos", Coordinates::class.java).getClientBlockPos(ctx.source),
                                     StringArgumentType.getString(ctx, "name")
                                 ).also { if (it == 1) {
-                                    ctx.source.sendFeedback(Component.literal("Done!"))
+                                    ctx.source.sendFeedback(Component.translatable("commands.metro.station.create.success"))
                                 } else {
-                                    ctx.source.sendError(Component.literal("Error. Invalid position"))
+                                    ctx.source.sendError(Component.translatable("commands.metro.station.create.error.position"))
                                 } }
                             }
                         )
@@ -68,9 +68,9 @@ object MClientCommand {
                                     it
                                 }.also {
                                     if (it == 1) {
-                                        ctx.source.sendFeedback(Component.literal("Done!"))
+                                        ctx.source.sendFeedback(Component.translatable("commands.metro.line.success.updated"))
                                     } else {
-                                        ctx.source.sendFeedback(Component.literal("New line was created!"))
+                                        ctx.source.sendFeedback(Component.translatable("commands.metro.line.success.new"))
                                     }
                                 }
                             }
@@ -88,7 +88,7 @@ object MClientCommand {
                                     if (_col.length != 6) throw IllegalArgumentException()
                                     col = _col.hexToInt()
                                 } catch (_: IllegalArgumentException) {
-                                    ctx.source.sendError(Component.literal("Invalid color format!"))
+                                    ctx.source.sendError(Component.translatable("commands.metro.line.error.color"))
                                     return@executes -1
                                 }
 
@@ -97,9 +97,9 @@ object MClientCommand {
                                     it
                                 }.also {
                                     if (it == 1) {
-                                        ctx.source.sendFeedback(Component.literal("Done!"))
+                                        ctx.source.sendFeedback(Component.translatable("commands.metro.line.success.updated"))
                                     } else {
-                                        ctx.source.sendFeedback(Component.literal("New line was created!"))
+                                        ctx.source.sendFeedback(Component.translatable("commands.metro.line.success.new"))
                                     }
                                 }
                             }
@@ -113,7 +113,7 @@ object MClientCommand {
                                 val st = StringArgumentType.getString(ctx, "stations").split(" ").map { s ->
                                     val t = s.toIntOrNull()
                                     if (t == null || SMetroInfo.getInstance().stations.all { it.id != t }) {
-                                        ctx.source.sendError(Component.literal("Unknown id: $t"))
+                                        ctx.source.sendError(Component.translatable("commands.metro.line.stations.error.unknown", t.toString()))
                                         return@executes -1
                                     }
                                     t
@@ -123,9 +123,9 @@ object MClientCommand {
                                     it
                                 }.also {
                                     if (it == 1) {
-                                        ctx.source.sendFeedback(Component.literal("Done!"))
+                                        ctx.source.sendFeedback(Component.translatable("commands.metro.line.success.updated"))
                                     } else {
-                                        ctx.source.sendFeedback(Component.literal("New line was created!"))
+                                        ctx.source.sendFeedback(Component.translatable("commands.metro.line.success.new"))
                                     }
                                 }
                             }
@@ -153,7 +153,8 @@ object MClientCommand {
         val lines = info.lines.toMutableList()
         val i = lines.indexOfFirst { it.id == lineId }
         if (i == -1) {
-            val nl = MetroLine((lines.maxOfOrNull { it.id } ?: 0) + 1, "New line", 0xffffff, listOf())
+            val name = Component.translatable("smetro.line.name.default").string
+            val nl = MetroLine((lines.maxOfOrNull { it.id } ?: 0) + 1, name, 0xffffff, listOf())
             lines.add(updater(nl))
             SMetroInfo.save(SMetroInfo(info.stations, lines.toList()))
             return 2
