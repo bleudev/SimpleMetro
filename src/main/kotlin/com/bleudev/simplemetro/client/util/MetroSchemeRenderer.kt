@@ -3,6 +3,7 @@ package com.bleudev.simplemetro.client.util
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.mixin.client.accessor.xaero.GuiMapAccessor
 import com.bleudev.simplemetro.obj.MetroLine
+import com.bleudev.simplemetro.obj.MetroStation
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.ChatFormatting
@@ -14,6 +15,7 @@ import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.TextColor
 import net.minecraft.util.ARGB
 import xaero.map.gui.GuiMap
 import java.lang.reflect.Modifier
@@ -32,8 +34,8 @@ class MetroSchemeRenderer private constructor() {
             connectionRenderStates.clear()
 
             val lmap = SMetroInfo.getInstance().lines.associateBy { it.id }
-            for ((id, pos, name, transfers) in SMetroInfo.getInstance().stations) {
-                stationRenderStates[id] = StationRenderState(id, pos, name, listOf(), transfers)
+            for ((id, pos, name, transfers, status) in SMetroInfo.getInstance().stations) {
+                stationRenderStates[id] = StationRenderState(id, pos, name, listOf(), transfers, status)
             }
             for (line in lmap.values) {
                 for ((cr, nx) in line.stations.zipWithNext()) {
@@ -95,33 +97,41 @@ class MetroSchemeRenderer private constructor() {
     }
 
     private fun drawStation(extractor: GuiGraphicsExtractor, station: StationRenderState, drawX: Float, drawY: Float, mouseX: Float, mouseY: Float, pixelScale: Double): (() -> Unit)? {
-        if (station.lines.isEmpty() || station.argbColors.isEmpty()) return null
+        if (station.lines.isEmpty() || station.schemeColors.isEmpty()) return null
 
         extractor.pose().pushMatrix()
         extractor.pose().translate(drawX, drawY)
 
-        // Support for only 4 colors, sorry
-        fun checkSize(s: Int): Boolean = station.lines.size >= s && station.argbColors.size >= s
-        extractor.fill(-4, -4, 4, 4, station.argbColors[0])
-        if (checkSize(2)) {
-            extractor.fill(-4, 0, 4, 4, station.argbColors[1])
-            if (checkSize(3)) {
-                extractor.fill(-4, 0, 0, 4, station.argbColors[2])
-                if (checkSize(4)) {
-                    extractor.fill(-4, -4, 0, 0, station.argbColors[3])
+        val isOpen = station.status == MetroStation.Status.OPEN
+        if (isOpen) {
+            // Support for only 4 colors, sorry
+            fun checkSize(s: Int): Boolean = station.lines.size >= s && station.schemeColors.size >= s
+            extractor.fill(-4, -4, 4, 4, station.schemeColors[0])
+            if (checkSize(2)) {
+                extractor.fill(-4, 0, 4, 4, station.schemeColors[1])
+                if (checkSize(3)) {
+                    extractor.fill(-4, 0, 0, 4, station.schemeColors[2])
+                    if (checkSize(4)) {
+                        extractor.fill(-4, -4, 0, 0, station.schemeColors[3])
+                    }
                 }
             }
-        }
+        } else extractor.fill(-4, -4, 4, 4, station.grayColor)
 
 
         extractor.pose().pushMatrix()
         extractor.pose().scale(.75f)
         val alpha = ((pixelScale - 7.5) / 1.5).coerceIn(0.0, 1.0).toFloat()
-        if (station.lines.size == 1) {
-            extractor.centeredText(Minecraft.getInstance().font, station.lines[0].id.toString(), 0, -4, ARGB.color(alpha, 0xffffff))
-            extractor.centeredText(Minecraft.getInstance().font, station.name, 0, 8, ARGB.srgbLerp(alpha, ARGB.color(0f, station.argbColors[0]), station.argbColors[0]))
+
+        if (isOpen) {
+            if (station.lines.size == 1) {
+                extractor.centeredText(Minecraft.getInstance().font, station.lines[0].id.toString(), 0, -4, ARGB.color(alpha, 0xffffff))
+                extractor.centeredText(Minecraft.getInstance().font, station.name, 0, 8, ARGB.srgbLerp(alpha, ARGB.color(0f, station.schemeColors[0]), station.schemeColors[0]))
+            } else {
+                extractor.centeredText(Minecraft.getInstance().font, station.name, 0, 8, ARGB.srgbLerp(alpha, ARGB.color(0f, station.whiteColor), station.whiteColor))
+            }
         } else {
-            extractor.centeredText(Minecraft.getInstance().font, station.name, 0, 8, ARGB.srgbLerp(alpha, ARGB.color(0f, station.whiteColor), station.whiteColor))
+            extractor.centeredText(Minecraft.getInstance().font, station.name, 0, 8, ARGB.srgbLerp(alpha, ARGB.color(0f, station.grayColor), station.grayColor))
         }
         extractor.pose().popMatrix()
         extractor.pose().popMatrix()
@@ -139,14 +149,23 @@ class MetroSchemeRenderer private constructor() {
 
     private fun GuiGraphicsExtractor.stationTooltip(station: StationRenderState) {
         val col = if (station.lines.size > 1) -1 else station.lines[0].color
-        val lines = arrayListOf<ClientTooltipComponent>(ColoredTooltipComponent(station.name, col))
+        val lines = arrayListOf<ClientTooltipComponent>(ClientTextTooltip(Component.literal(station.name)
+            .let {
+                if (station.status == MetroStation.Status.OPEN) it.withColor(col)
+                else it.withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC)
+            }.visualOrderText
+        ))
+        if (station.status.message != null) {
+            lines.add(ClientTextTooltip(station.status.message.copy().withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC).visualOrderText))
+        }
+        lines.add(ColoredTooltipComponent("", -1)) // space
         for ((id, name, color) in station.lines) {
             lines.add(StationLineNameTooltipComponent(id, name, color))
         }
         lines.add(ColoredTooltipComponent("", -1)) // space
         lines.add(ClientTextTooltip(Component.translatable("xaero.map.station.tooltip.id", station.id).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC).visualOrderText))
 
-        tooltip(Minecraft.getInstance().font, lines.toList(), 0, 0, DefaultTooltipPositioner.INSTANCE, null, true)
+        tooltip(Minecraft.getInstance().font, lines.toList(), 0, 0, DefaultTooltipPositioner.INSTANCE, null, false)
     }
 
     private fun drawConnection(extractor: GuiGraphicsExtractor, connection: ConnectionRenderState, drawCoords: (Int, Int) -> Pair<Float, Float>) {
@@ -231,14 +250,22 @@ class MetroSchemeRenderer private constructor() {
 
     private data class StationLineRenderState(val id: Int, val name: String, val color: Int)
 
-    private data class StationRenderState(val id: Int, val pos: BlockPos, val name: String, val lines: List<StationLineRenderState>, val transfers: List<Int>) {
-        val argbColors: List<Int> get() = lines.map { ARGB.color(.9f, it.color) }
+    private data class StationRenderState(
+        val id: Int,
+        val pos: BlockPos,
+        val name: String,
+        val lines: List<StationLineRenderState>,
+        val transfers: List<Int>,
+        val status: MetroStation.Status
+    ) {
+        val schemeColors: List<Int> get() = lines.map { ARGB.color(.9f, it.color) }
         val whiteColor: Int get() = ARGB.color(.9f, 0xffffff)
+        val grayColor: Int get() = ARGB.color(.9f, TextColor.GRAY.value)
 
         fun addLine(line: MetroLine): StationRenderState = StationRenderState(
             id, pos, name,
             HashSet(lines).apply { add(StationLineRenderState(line.id, line.name, line.color)) }.toList(),
-            transfers
+            transfers, status
         )
     }
     private data class ConnectionRenderState(val pos1: BlockPos, val pos2: BlockPos, val color: Int) {

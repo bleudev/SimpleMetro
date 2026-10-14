@@ -53,6 +53,43 @@ object MClientCommand {
                         )
                     )
                 )
+                .then(ClientCommands
+                    .argument("id", IntegerArgumentType.integer(1))
+                    .then(ClientCommands
+                        .literal("status")
+                        .then(ClientCommands
+                            .argument("status", StringArgumentType.word())
+                            .suggests { _, b ->
+                                for (status in MetroStation.Status.entries) {
+                                    val s = status.serializedName
+                                    if (s.startsWith(b.remainingLowerCase)) {
+                                        b.suggest(s)
+                                    }
+                                }
+                                b.buildFuture()
+                            }
+                            .executes { ctx ->
+                                val id = IntegerArgumentType.getInteger(ctx, "id")
+                                val status = MetroStation.Status.fromNameOrNull(StringArgumentType.getString(ctx, "status"))
+                                if (status == null) {
+                                    ctx.source.sendError(Component.translatable("commands.metro.station.update.error.status"))
+                                    return@executes -1
+                                } else {
+                                    return@executes updateStation(id) {
+                                        it.status = status
+                                        it
+                                    }.also {
+                                        if (it == 1) {
+                                            ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
+                                        } else {
+                                            ctx.source.sendError(Component.translatable("commands.metro.station.update.error.dont_exist"))
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                    )
+                )
             )
             .then(ClientCommands
                 .literal("line")
@@ -140,12 +177,24 @@ object MClientCommand {
         val stations = ArrayList(info.stations)
         if (stations.all { !it.pos.atY(100).closerThan(pos.atY(100), 3.0) && it.pos.y > 3 }) {
             val id = (stations.maxOfOrNull { it.id } ?: 0) + 1
-            stations.add(MetroStation(id, pos, name, listOf()))
+            stations.add(MetroStation(id, pos, name, listOf(), MetroStation.Status.OPEN))
         } else {
             return -1
         }
         SMetroInfo.save(SMetroInfo(stations.toList(), info.lines))
         return 1
+    }
+
+    private fun updateStation(id: Int, updater: (MetroStation) -> MetroStation): Int {
+        val info = SMetroInfo.getInstance()
+        val stations = info.stations.toMutableList()
+        val i = stations.indexOfFirst { it.id == id }
+        if (i == -1) return -1
+        else {
+            stations[i] = updater(stations[i])
+            SMetroInfo.save(SMetroInfo(stations.toList(), info.lines))
+            return 1
+        }
     }
 
     private fun addOrUpdateLine(lineId: Int, updater: (MetroLine) -> MetroLine): Int {
