@@ -56,6 +56,42 @@ object MClientCommand {
                 .then(ClientCommands
                     .argument("id", IntegerArgumentType.integer(1))
                     .then(ClientCommands
+                        .literal("pos")
+                        .then(ClientCommands
+                            .argument("pos", BlockPosArgument.blockPos())
+                            .executes { ctx ->
+                                return@executes updateStation(IntegerArgumentType.getInteger(ctx, "id")) {
+                                    it.pos = ctx.getArgument("pos", Coordinates::class.java).getClientBlockPos(ctx.source)
+                                    it
+                                }.also {
+                                    if (it == 1) {
+                                        ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
+                                    } else {
+                                        ctx.source.sendError(Component.translatable("commands.metro.station.update.error.dont_exist"))
+                                    }
+                                }
+                            }
+                        )
+                    )
+                    .then(ClientCommands
+                        .literal("name")
+                        .then(ClientCommands
+                            .argument("name", StringArgumentType.greedyString())
+                            .executes { ctx ->
+                                return@executes updateStation(IntegerArgumentType.getInteger(ctx, "id")) {
+                                    it.name = StringArgumentType.getString(ctx, "name")
+                                    it
+                                }.also {
+                                    if (it == 1) {
+                                        ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
+                                    } else {
+                                        ctx.source.sendError(Component.translatable("commands.metro.station.update.error.dont_exist"))
+                                    }
+                                }
+                            }
+                        )
+                    )
+                    .then(ClientCommands
                         .literal("status")
                         .then(ClientCommands
                             .argument("status", StringArgumentType.word())
@@ -69,13 +105,12 @@ object MClientCommand {
                                 b.buildFuture()
                             }
                             .executes { ctx ->
-                                val id = IntegerArgumentType.getInteger(ctx, "id")
                                 val status = MetroStation.Status.fromNameOrNull(StringArgumentType.getString(ctx, "status"))
                                 if (status == null) {
                                     ctx.source.sendError(Component.translatable("commands.metro.station.update.error.status"))
                                     return@executes -1
                                 } else {
-                                    return@executes updateStation(id) {
+                                    return@executes updateStation(IntegerArgumentType.getInteger(ctx, "id")) {
                                         it.status = status
                                         it
                                     }.also {
@@ -98,7 +133,7 @@ object MClientCommand {
                     .then(ClientCommands
                         .literal("name")
                         .then(ClientCommands
-                            .argument("name", StringArgumentType.string())
+                            .argument("name", StringArgumentType.greedyString())
                             .executes { ctx ->
                                 addOrUpdateLine(IntegerArgumentType.getInteger(ctx, "id")) {
                                     it.name = StringArgumentType.getString(ctx, "name")
