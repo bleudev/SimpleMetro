@@ -16,12 +16,14 @@ class SMetroDefaultLanguage(output: FabricPackOutput, registryLookup: Completabl
         builder.add("commands.metro.line.success.updated", "Line was updated successfully!")
         builder.add("commands.metro.line.success.new", "New line was created!")
         builder.add("commands.metro.line.error.color", "Invalid color format")
-        builder.add("commands.metro.line.stations.error.unknown", "Unknown station with id: %d")
-        builder.add("xaero.map.station.tooltip.id", "ID: %d")
+        builder.add("commands.metro.stations.error.unknown", "Unknown station with id: %d")
         builder.add("xaero.map.station.tooltip.status.closed_temp", "(closed temporary)")
         builder.add("xaero.map.station.tooltip.status.closed_repair", "(closed for repair)")
         builder.add("xaero.map.station.tooltip.status.under_construction", "(under construction)")
         builder.add("xaero.map.station.tooltip.status.planned", "(planned)")
+        builder.add("xaero.map.station.tooltip.transfers.one", "Transfer to the station")
+        builder.add("xaero.map.station.tooltip.transfers.some", "Transfers at stations")
+        builder.add("xaero.map.station.tooltip.id", "ID: %d")
     }
 }
 
@@ -36,11 +38,13 @@ class SMetroRussianLanguage(output: FabricPackOutput, registryLookup: Completabl
         builder.add("commands.metro.line.success.updated", "Ветка была успешно обновлена!")
         builder.add("commands.metro.line.success.new", "Новая ветка была создана!")
         builder.add("commands.metro.line.error.color", "Неверный формат цвета")
-        builder.add("commands.metro.line.stations.error.unknown", "Станция с айди %d не найдена")
-        builder.add("xaero.map.station.tooltip.id", "Айди: %d")
+        builder.add("commands.metro.stations.error.unknown", "Станция с айди %d не найдена")
         builder.add("xaero.map.station.tooltip.status.closed_temp", "(временно закрыто)")
         builder.add("xaero.map.station.tooltip.status.closed_repair", "(закрыто на ремонт)")
         builder.add("xaero.map.station.tooltip.status.under_construction", "(в процессе строительства)")
         builder.add("xaero.map.station.tooltip.status.planned", "(запланировано)")
+        builder.add("xaero.map.station.tooltip.transfers.one", "Пересадка на станцию")
+        builder.add("xaero.map.station.tooltip.transfers.some", "Пересадка на станции")
+        builder.add("xaero.map.station.tooltip.id", "Айди: %d")
     }
 }

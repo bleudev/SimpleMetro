@@ -17,6 +17,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.TextColor
 import net.minecraft.util.ARGB
+import net.minecraft.util.FormattedCharSequence
 import xaero.map.gui.GuiMap
 import java.lang.reflect.Modifier
 import kotlin.math.*
@@ -148,21 +149,31 @@ class MetroSchemeRenderer private constructor() {
     }
 
     private fun GuiGraphicsExtractor.stationTooltip(station: StationRenderState) {
-        val col = if (station.lines.size > 1) -1 else station.lines[0].color
-        val lines = arrayListOf<ClientTooltipComponent>(ClientTextTooltip(Component.literal(station.name)
-            .let {
-                if (station.status == MetroStation.Status.OPEN) it.withColor(col)
-                else it.withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC)
-            }.visualOrderText
-        ))
+        val space = ClientTextTooltip(FormattedCharSequence.EMPTY)
+
+        val lines = arrayListOf<ClientTooltipComponent>(StationLinesNameTooltipComponent(station.lines, station.name, station.status))
         if (station.status.message != null) {
             lines.add(ClientTextTooltip(station.status.message.copy().withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC).visualOrderText))
         }
-        lines.add(ColoredTooltipComponent("", -1)) // space
-        for ((id, name, color) in station.lines) {
-            lines.add(StationLineNameTooltipComponent(id, name, color))
+        lines.add(space)
+        for (line in station.lines) {
+            lines.add(StationLinesNameTooltipComponent(listOf(line), line.name, MetroStation.Status.OPEN))
         }
-        lines.add(ColoredTooltipComponent("", -1)) // space
+        lines.add(space)
+
+        if (station.transfers.isNotEmpty()) {
+            lines.add(ClientTextTooltip((
+                if (station.transfers.size == 1) Component.translatable("xaero.map.station.tooltip.transfers.one")
+                else Component.translatable("xaero.map.station.tooltip.transfers.some")
+            ).visualOrderText))
+            for (transfer in station.transfers) {
+                stationRenderStates[transfer]?.let { state ->
+                    lines.add(StationLinesNameTooltipComponent(state.lines, state.name, state.status))
+                }
+            }
+            lines.add(space)
+        }
+
         lines.add(ClientTextTooltip(Component.translatable("xaero.map.station.tooltip.id", station.id).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC).visualOrderText))
 
         tooltip(Minecraft.getInstance().font, lines.toList(), 0, 0, DefaultTooltipPositioner.INSTANCE, null, false)
@@ -225,26 +236,36 @@ class MetroSchemeRenderer private constructor() {
         }
     }
 
-    private open class ColoredTooltipComponent(private val text: String, protected val color: Int) : ClientTooltipComponent {
-        override fun getHeight(font: Font): Int = font.lineHeight + 1
-        override fun getWidth(font: Font): Int = font.width(this.text)
-        override fun extractText(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) {
-            val col = ARGB.setBrightness(ARGB.color(1f, color), .9f)
-            graphics.text(font, this.text, x, y, col)
-        }
-    }
+    private class StationLinesNameTooltipComponent(
+        lines: List<StationLineRenderState>,
+        private val name: String,
+        private val status: MetroStation.Status,
+    ) : ClientTooltipComponent {
+        private val lines: List<StationLineRenderState> = lines.sortedBy { it.id }
 
-    private class StationLineNameTooltipComponent(private val id: Int, name: String, color: Int) : ColoredTooltipComponent(name, color) {
-        override fun getWidth(font: Font): Int = super.getWidth(font) + 8
+        override fun getHeight(font: Font): Int = font.lineHeight + 1
+        override fun getWidth(font: Font): Int = font.width(name) + 8 * lines.size
         override fun extractText(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) {
-            val col = ARGB.setBrightness(ARGB.color(1f, color), .9f)
-            graphics.fill(x, y+1, x+6, y+7, col)
-            graphics.pose().pushMatrix()
-            graphics.pose().translate(x.toFloat(), y.toFloat())
-            graphics.pose().scale(.5f)
-            graphics.centeredText(font, id.toString(), 6, 4, -1)
-            graphics.pose().popMatrix()
-            super.extractText(graphics, font, x + 8, y)
+            var x = x
+            var styledName = Component.literal(name)
+            var nameColor = ARGB.color(1f, if (status.isOpen) if (lines.size == 1) lines[0].color else 0xffffff else TextColor.GRAY.value)
+            if (status.isOpen) {
+                nameColor = ARGB.setBrightness(nameColor, .9f)
+            } else {
+                styledName = styledName.withStyle(ChatFormatting.ITALIC)
+            }
+
+            for ((lineId, _, lineColor) in lines) {
+                val col = ARGB.setBrightness(ARGB.color(1f, lineColor), .9f)
+                graphics.fill(x, y+1, x+6, y+7, col)
+                graphics.pose().pushMatrix()
+                graphics.pose().translate(x.toFloat(), y.toFloat())
+                graphics.pose().scale(.5f)
+                graphics.centeredText(font, lineId.toString(), 6, 4, -1)
+                graphics.pose().popMatrix()
+                x += 8
+            }
+            graphics.text(font, styledName, x, y, nameColor)
         }
     }
 

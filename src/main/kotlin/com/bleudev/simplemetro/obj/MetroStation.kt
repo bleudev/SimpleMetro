@@ -12,13 +12,15 @@ import net.minecraft.network.codec.StreamCodec
 import net.minecraft.util.StringRepresentable
 
 @Serializable
-data class MetroStation(val id: Int, var pos: BlockPos, var name: String, val transfers: List<Int> = listOf(), var status: Status = Status.OPEN) {
+data class MetroStation(val id: Int, var pos: BlockPos, var name: String, var transfers: List<Int> = listOf(), var status: Status = Status.OPEN) {
     enum class Status(val message: Component? = null) : StringRepresentable {
         OPEN,
         CLOSED_TEMP(Component.translatable("xaero.map.station.tooltip.status.closed_temp")),
         CLOSED_REPAIR(Component.translatable("xaero.map.station.tooltip.status.closed_repair")),
         UNDER_CONSTRUCTION(Component.translatable("xaero.map.station.tooltip.status.under_construction")),
         PLANNED(Component.translatable("xaero.map.station.tooltip.status.planned"));
+
+        val isOpen: Boolean get() = this == OPEN
 
         override fun getSerializedName(): String = name.lowercase()
 

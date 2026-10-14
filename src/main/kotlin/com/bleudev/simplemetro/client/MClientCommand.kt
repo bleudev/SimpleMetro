@@ -124,6 +124,29 @@ object MClientCommand {
                             }
                         )
                     )
+                    .then(ClientCommands
+                        .literal("transfers")
+                        .then(ClientCommands
+                            .argument("transfers", StringArgumentType.greedyString())
+                            .executes { ctx ->
+                                val transfers = StringArgumentType.getString(ctx, "transfers").split(" ").map { s ->
+                                    val t = s.toIntOrNull()
+                                    if (t == null || SMetroInfo.getInstance().stations.all { it.id != t }) {
+                                        ctx.source.sendError(Component.translatable("commands.metro.stations.error.unknown", t.toString()))
+                                        return@executes -1
+                                    }
+                                    t
+                                }
+                                setTransfers(IntegerArgumentType.getInteger(ctx, "id"), transfers).also {
+                                    if (it == 1) {
+                                        ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
+                                    } else {
+                                        ctx.source.sendError(Component.translatable("commands.metro.station.update.error.dont_exist"))
+                                    }
+                                }
+                            }
+                        )
+                    )
                 )
             )
             .then(ClientCommands
@@ -185,7 +208,7 @@ object MClientCommand {
                                 val st = StringArgumentType.getString(ctx, "stations").split(" ").map { s ->
                                     val t = s.toIntOrNull()
                                     if (t == null || SMetroInfo.getInstance().stations.all { it.id != t }) {
-                                        ctx.source.sendError(Component.translatable("commands.metro.line.stations.error.unknown", t.toString()))
+                                        ctx.source.sendError(Component.translatable("commands.metro.stations.error.unknown", t.toString()))
                                         return@executes -1
                                     }
                                     t
@@ -230,6 +253,46 @@ object MClientCommand {
             SMetroInfo.save(SMetroInfo(stations.toList(), info.lines))
             return 1
         }
+    }
+
+    private fun setTransfers(id: Int, transfers: List<Int>): Int {
+        val info = SMetroInfo.getInstance()
+        val stations = info.stations.toMutableList()
+
+        fun update(uid: Int, updater: (MetroStation) -> MetroStation) {
+            val j = stations.indexOfFirst { it.id == uid }
+            if (j == -1) return
+            else {
+                stations[j] = updater(stations[j])
+            }
+        }
+
+        val i = stations.indexOfFirst { it.id == id }
+        if (i == -1) return -1
+        stations[i].transfers.forEach { id2 ->
+            if (id2 !in transfers) {
+                update(id2) {
+                    val tr = it.transfers.toMutableList()
+                    if (id in tr) tr.remove(id)
+                    it.transfers = tr.toList()
+                    it
+                }
+            }
+        }
+        transfers.forEach { id2 ->
+            update(id2) {
+                val tr = it.transfers.toMutableList()
+                if (id !in tr) tr.add(id)
+                it.transfers = tr.toList()
+                it
+            }
+        }
+        update(id) {
+            it.transfers = transfers
+            it
+        }
+        SMetroInfo.save(SMetroInfo(stations.toList(), info.lines))
+        return 1
     }
 
     private fun addOrUpdateLine(lineId: Int, updater: (MetroLine) -> MetroLine): Int {
