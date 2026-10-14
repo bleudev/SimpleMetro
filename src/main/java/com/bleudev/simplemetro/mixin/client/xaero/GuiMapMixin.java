@@ -15,6 +15,6 @@ import xaero.map.gui.GuiMap;
 public class GuiMapMixin {
     @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void renderMetroScheme(GuiGraphicsExtractor guiGraphics, int scaledMouseX, int scaledMouseY, float delta, CallbackInfo ci) {
-        MetroSchemeRenderer.getInstance().extractRenderState((GuiMap) (Object) this, guiGraphics);
+        MetroSchemeRenderer.getInstance().extractRenderState((GuiMap) (Object) this, guiGraphics, scaledMouseX, scaledMouseY);
     }
 }
