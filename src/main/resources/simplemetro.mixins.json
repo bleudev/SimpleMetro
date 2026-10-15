@@ -9,7 +9,7 @@
   "client": [
     "client.accessor.xaero.GuiMapAccessor",
     "client.xaero.GuiMapMixin",
-    "client.xaero.minimap.MinimapElementOverMapRendererHandlerMixin"
+    "client.xaero.minimap.MinimapElementMapRendererHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
