@@ -98,8 +98,6 @@ class MetroSchemeRenderer private constructor() {
     }
 
     private fun drawStation(extractor: GuiGraphicsExtractor, station: StationRenderState, drawX: Float, drawY: Float, mouseX: Float, mouseY: Float, pixelScale: Double): (() -> Unit)? {
-        if (station.lines.isEmpty() || station.schemeColors.isEmpty()) return null
-
         extractor.pose().pushMatrix()
         extractor.pose().translate(drawX, drawY)
 
@@ -159,7 +157,7 @@ class MetroSchemeRenderer private constructor() {
         for (line in station.lines) {
             lines.add(StationLinesNameTooltipComponent(listOf(line), line.name, MetroStation.Status.OPEN))
         }
-        lines.add(space)
+        if (station.lines.isNotEmpty()) lines.add(space)
 
         if (station.transfers.isNotEmpty()) {
             lines.add(ClientTextTooltip((
@@ -279,7 +277,7 @@ class MetroSchemeRenderer private constructor() {
         val transfers: List<Int>,
         val status: MetroStation.Status
     ) {
-        val schemeColors: List<Int> get() = lines.map { ARGB.color(.9f, it.color) }
+        val schemeColors: List<Int> get() = if (lines.isEmpty()) listOf(ARGB.white(.9f)) else lines.map { ARGB.color(.9f, it.color) }
         val whiteColor: Int get() = ARGB.color(.9f, 0xffffff)
         val grayColor: Int get() = ARGB.color(.9f, TextColor.GRAY.value)
 

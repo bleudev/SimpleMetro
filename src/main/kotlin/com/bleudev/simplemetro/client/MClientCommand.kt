@@ -8,6 +8,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.context.CommandContext
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.commands.CommandBuildContext
@@ -22,8 +23,8 @@ import net.minecraft.world.phys.Vec3
 
 object MClientCommand {
     fun register(dispatcher: CommandDispatcher<FabricClientCommandSource>, context: CommandBuildContext) {
-        val m = dispatcher.register(command(ClientCommands.literal("m"), context))
-        dispatcher.register(ClientCommands.literal("metro").redirect(m))
+        dispatcher.register(command(ClientCommands.literal("m"), context))
+        dispatcher.register(command(ClientCommands.literal("metro"), context))
     }
 
     private fun command(
@@ -39,10 +40,10 @@ object MClientCommand {
                     .then(ClientCommands
                         .argument("pos", BlockPosArgument.blockPos())
                         .then(ClientCommands
-                            .argument("name", StringArgumentType.string())
+                            .argument("name", StringArgumentType.greedyString())
                             .executes { ctx ->
                                 addStation(
-                                    ctx.getArgument("pos", Coordinates::class.java).getClientBlockPos(ctx.source),
+                                    ctx.getClientBlockPos("pos"),
                                     StringArgumentType.getString(ctx, "name")
                                 ).also { if (it == 1) {
                                     ctx.source.sendFeedback(Component.translatable("commands.metro.station.create.success"))
@@ -61,7 +62,7 @@ object MClientCommand {
                             .argument("pos", BlockPosArgument.blockPos())
                             .executes { ctx ->
                                 return@executes updateStation(IntegerArgumentType.getInteger(ctx, "id")) {
-                                    it.pos = ctx.getArgument("pos", Coordinates::class.java).getClientBlockPos(ctx.source)
+                                    it.pos = ctx.getClientBlockPos("pos")
                                     it
                                 }.also {
                                     if (it == 1) {
@@ -310,6 +311,10 @@ object MClientCommand {
             SMetroInfo.save(SMetroInfo(info.stations, lines.toList()))
             return 1
         }
+    }
+
+    private fun CommandContext<FabricClientCommandSource>.getClientBlockPos(name: String): BlockPos {
+        return getArgument(name, Coordinates::class.java).getClientBlockPos(source)
     }
 
     private fun Coordinates.getClientBlockPos(sender: FabricClientCommandSource): BlockPos {
