@@ -17,104 +17,72 @@ import net.minecraft.network.chat.TextColor
 import net.minecraft.util.ARGB
 import net.minecraft.util.FormattedCharSequence
 import java.lang.reflect.Modifier
-import kotlin.math.*
 
 @Environment(EnvType.CLIENT)
-object XaeroMapSchemeRenderer {
-    private val renderState: MetroSchemeExtractor.SchemeRenderState get() = MetroSchemeExtractor.getInstance().extractRenderState()
+internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
+    private var width: Int = 0
+    private var height: Int = 0
+    private var pixelScale: Float = 0f
 
     @JvmStatic
     // Map is GuiMap
     internal fun extractRenderState(map: Any, extractor: GuiGraphicsExtractor, scaledMouseX: Int, scaledMouseY: Int) {
-        val width = extractor.guiWidth()
-        val height = extractor.guiHeight()
+        this.width = extractor.guiWidth()
+        this.height = extractor.guiHeight()
 
         val i = (map as GuiMapAccessor)
-
         val cameraX = i.`simplemetro$cameraX`()
         val cameraZ = i.`simplemetro$cameraZ`()
         var pixelScale = i.`simplemetro$scale`()
         if (pixelScale <= 0f) {
             pixelScale = i.`simplemetro$userScale`()
         }
+        this.pixelScale = pixelScale.toFloat()
 
-        if (pixelScale > 0f) {
+        if (pixelScale > 0) {
             val mapScreenScale = getIntField(map, "screenScale", 1).toDouble()
             val scale = pixelScale / mapScreenScale
 
-            fun drawCoords(x: Int, z: Int): Pair<Float, Float> {
-                val drawX = (x - cameraX) * scale + width / 2
-                val drawY = (z - cameraZ) * scale + height / 2
-                return drawX.toFloat() to drawY.toFloat()
-            }
-            fun doNotCull(drawX: Float, drawY: Float): Boolean {
-                return !(drawX < -10.0) && !(drawY < -10.0) && !(drawX > (width + 10)) && !(drawY > (height + 10))
-            }
-
-            for (connection in renderState.connections) {
-                drawConnection(extractor, connection, ::drawCoords)
-            }
-            var delayed: (() -> Unit)? = null
-            for (station in renderState.stations.values) {
-                val (drawX, drawY) = drawCoords(station.pos.x, station.pos.z)
-                if (doNotCull(drawX, drawY)) {
-                    drawStation(extractor, station, drawX, drawY, scaledMouseX.toFloat(), scaledMouseY.toFloat(), pixelScale)?.let { delayed = it }
+            val adapter = object : MapGraphicsExtractor(extractor) {
+                override fun mapScale(): Float = 1f
+                override fun mousePos(): DrawPosition = DrawPosition(scaledMouseX.toFloat(), scaledMouseY.toFloat())
+                override fun drawPos(x: Int, z: Int): DrawPosition {
+                    val x = (x - cameraX) * scale + width / 2
+                    val y = (z - cameraZ) * scale + height / 2
+                    return DrawPosition(x.toFloat(), y.toFloat())
                 }
             }
-            delayed?.invoke()
+            extractRenderState(adapter)?.let { hovered ->
+                drawStationTooltip(extractor, renderState.stations[hovered]!!, scaledMouseX.toFloat(), scaledMouseY.toFloat())
+            }
         }
     }
 
-    private fun drawStation(extractor: GuiGraphicsExtractor, station: MetroSchemeExtractor.StationRenderState, drawX: Float, drawY: Float, mouseX: Float, mouseY: Float, pixelScale: Double): (() -> Unit)? {
-        extractor.pose().pushMatrix()
-        extractor.pose().translate(drawX, drawY)
-
-        val isOpen = station.status == MetroStation.Status.OPEN
-        if (isOpen) {
-            // Support for only 4 colors, sorry
-            fun checkSize(s: Int): Boolean = station.lines.size >= s && station.schemeColors.size >= s
-            extractor.fill(-4, -4, 4, 4, station.schemeColors[0])
-            if (checkSize(2)) {
-                extractor.fill(-4, 0, 4, 4, station.schemeColors[1])
-                if (checkSize(3)) {
-                    extractor.fill(-4, 0, 0, 4, station.schemeColors[2])
-                    if (checkSize(4)) {
-                        extractor.fill(-4, -4, 0, 0, station.schemeColors[3])
-                    }
-                }
-            }
-        } else extractor.fill(-4, -4, 4, 4, station.grayColor)
-
-
-        extractor.pose().pushMatrix()
-        extractor.pose().scale(.75f)
-        val alpha = ((pixelScale - 7.5) / 1.5).coerceIn(0.0, 1.0).toFloat()
-
-        if (isOpen) {
-            if (station.lines.size == 1) {
-                extractor.centeredText(Minecraft.getInstance().font, station.lines[0].id.toString(), 0, -4, ARGB.color(alpha, 0xffffff))
-                extractor.centeredText(Minecraft.getInstance().font, station.name, 0, 8, ARGB.srgbLerp(alpha, ARGB.color(0f, station.schemeColors[0]), station.schemeColors[0]))
-            } else {
-                extractor.centeredText(Minecraft.getInstance().font, station.name, 0, 8, ARGB.srgbLerp(alpha, ARGB.color(0f, station.whiteColor), station.whiteColor))
-            }
-        } else {
-            extractor.centeredText(Minecraft.getInstance().font, station.name, 0, 8, ARGB.srgbLerp(alpha, ARGB.color(0f, station.grayColor), station.grayColor))
+    override fun drawStation(extractor: CommonGraphicsExtractor, station: MetroSchemeExtractor.StationRenderState) {
+        val drawPos = extractor.drawPos(station.pos)
+        if (!(drawPos.x < -10.0) && !(drawPos.y < -10.0) && !(drawPos.x > (width + 10)) && !(drawPos.y > (height + 10))) {
+            super.drawStation(extractor, station)
         }
-        extractor.pose().popMatrix()
-        extractor.pose().popMatrix()
-
-        if ((drawX-mouseX).pow(2) + (drawY-mouseY).pow(2) <= 25) {
-            return {
-                extractor.pose().pushMatrix()
-                extractor.pose().translate(mouseX, mouseY)
-                extractor.stationTooltip(station)
-                extractor.pose().popMatrix()
-            }
-        }
-        return null
     }
 
-    private fun GuiGraphicsExtractor.stationTooltip(station: MetroSchemeExtractor.StationRenderState) {
+    override fun drawStationText(
+        extractor: CommonGraphicsExtractor,
+        station: MetroSchemeExtractor.StationRenderState,
+        alpha: Float
+    ) {
+        val alpha = ((this.pixelScale - 7.5) / 1.5).coerceIn(0.0, 1.0).toFloat()
+        super.drawStationText(extractor, station, alpha)
+    }
+
+    private fun drawStationTooltip(
+        extractor: GuiGraphicsExtractor,
+        station: MetroSchemeExtractor.StationRenderState,
+        mouseX: Float,
+        mouseY: Float,
+    ) {
+        extractor.pose().pushMatrix()
+        extractor.pose().translate(mouseX, mouseY)
+
         val space = ClientTextTooltip(FormattedCharSequence.EMPTY)
 
         val lines = arrayListOf<ClientTooltipComponent>(StationLinesNameTooltipComponent(station.lines, station.name, station.status))
@@ -129,9 +97,9 @@ object XaeroMapSchemeRenderer {
 
         if (station.transfers.isNotEmpty()) {
             lines.add(ClientTextTooltip((
-                if (station.transfers.size == 1) Component.translatable("xaero.map.station.tooltip.transfers.one")
-                else Component.translatable("xaero.map.station.tooltip.transfers.some")
-            ).visualOrderText))
+                    if (station.transfers.size == 1) Component.translatable("xaero.map.station.tooltip.transfers.one")
+                    else Component.translatable("xaero.map.station.tooltip.transfers.some")
+                    ).visualOrderText))
             for (transfer in station.transfers) {
                 renderState.stations[transfer]?.let { state ->
                     lines.add(StationLinesNameTooltipComponent(state.lines, state.name, state.status))
@@ -142,31 +110,8 @@ object XaeroMapSchemeRenderer {
 
         lines.add(ClientTextTooltip(Component.translatable("xaero.map.station.tooltip.id", station.id).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC).visualOrderText))
 
-        tooltip(Minecraft.getInstance().font, lines.toList(), 0, 0, DefaultTooltipPositioner.INSTANCE, null, false)
-    }
+        extractor.tooltip(Minecraft.getInstance().font, lines.toList(), 0, 0, DefaultTooltipPositioner.INSTANCE, null, false)
 
-    private fun drawConnection(extractor: GuiGraphicsExtractor, connection: MetroSchemeExtractor.ConnectionRenderState, drawCoords: (Int, Int) -> Pair<Float, Float>) {
-        val x1 = connection.pos1.x
-        val z1 = connection.pos1.z
-        val x2 = connection.pos2.x
-        val z2 = connection.pos2.z
-        val col = connection.argbColor
-
-        val (drawX1, drawY1) = drawCoords(x1, z1)
-        val (drawX2, drawY2) = drawCoords(x2, z2)
-
-        val dx = drawX2 - drawX1
-        val dy = drawY2 - drawY1
-        val len = hypot(dx, dy)
-
-        extractor.pose().pushMatrix()
-        if (dx > 0 || (dx == 0f && dy > 0)) {
-            extractor.pose().translate(drawX1, drawY1)
-        } else {
-            extractor.pose().translate(drawX2, drawY2)
-        }
-        extractor.pose().rotate(if (dx == 0f) PI.toFloat()/2 else atan(dy / dx)) // No zero division error!
-        extractor.fill(-2, -2, len.roundToInt() + 2, 2, col)
         extractor.pose().popMatrix()
     }
 
@@ -221,5 +166,15 @@ object XaeroMapSchemeRenderer {
             }
             graphics.text(font, styledName, x, y, nameColor)
         }
+    }
+
+    abstract class MapGraphicsExtractor(private val original: GuiGraphicsExtractor) : CommonGraphicsExtractor {
+        override fun pushPose() { original.pose().pushMatrix() }
+        override fun popPose() { original.pose().popMatrix() }
+        override fun translate(x: Float, y: Float) { original.pose().translate(x, y) }
+        override fun scale(x: Float, y: Float) { original.pose().scale(x, y) }
+        override fun rotate(radians: Float) { original.pose().rotate(radians) }
+        override fun fill(x0: Int, y0: Int, x: Int, y: Int, color: Int) = original.fill(x0, y0, x, y, color)
+        override fun centeredText(font: Font, text: String, x: Int, y: Int, color: Int) = original.centeredText(font, text, x, y, color)
     }
 }

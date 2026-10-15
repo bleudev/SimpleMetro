@@ -60,6 +60,9 @@ dependencies {
 
     implementation("maven.modrinth:xaeros-world-map:${project.property("xaeros_world_map")}")
     implementation("maven.modrinth:xaeros-minimap:${project.property("xaeros_minimap")}")
+    implementation(files("libs/xaerolib-fabric-26.3-1.7.17.jar"))
+
+    implementation("maven.modrinth:modmenu:21.0.0")
 
     implementation("org.quiltmc.parsers:gson:0.3.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
