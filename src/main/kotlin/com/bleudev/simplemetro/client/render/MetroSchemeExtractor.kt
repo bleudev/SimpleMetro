@@ -17,20 +17,37 @@ internal class MetroSchemeExtractor {
         val stations = hashMapOf<Int, StationRenderState>()
         val connections = arrayListOf<ConnectionRenderState>()
 
-        val lmap = info.lines.associateBy { it.id }
+        // Extract stations
         for ((id, pos, name, transfers, status) in info.stations) {
             stations[id] = StationRenderState(id, pos, name, listOf(), transfers, status)
         }
+
+        val lmap = info.lines.associateBy { it.id }
         for (line in lmap.values) {
             for ((cr, nx) in line.stations.zipWithNext()) {
+                // Extract connections
                 connections.add(ConnectionRenderState(stations[cr]!!.pos, stations[nx]!!.pos, line.color))
-
-                for (tr in stations[cr]!!.transfers) {
-                    connections.add(ConnectionRenderState(stations[cr]!!.pos, stations[tr]!!.pos, 0x555555))
-                }
-
+                // Extract station lines
                 stations[cr] = stations[cr]!!.addLine(line)
                 stations[nx] = stations[nx]!!.addLine(line)
+            }
+        }
+
+        // Extract transfers
+        val transferPairs = hashSetOf<Pair<Int, Int>>()
+        for ((id, pos, _, _, transfers) in stations.values) {
+            for (transferId in transfers) {
+                val other = stations[transferId] ?: continue
+                val pair = minOf(id, transferId) to maxOf(id, transferId)
+                if (transferPairs.add(pair)) {
+                    connections.add(
+                        ConnectionRenderState(
+                            pos,
+                            other.pos,
+                            0x555555,
+                        )
+                    )
+                }
             }
         }
 
