@@ -1,7 +1,7 @@
 package com.bleudev.simplemetro.config
 
 import com.bleudev.simplemetro.SMetro
-import com.bleudev.simplemetro.client.util.MetroSchemeRenderer
+import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ServerboundMetroInfoEdit
 import com.bleudev.simplemetro.obj.MetroLine
 import com.bleudev.simplemetro.obj.MetroStation
@@ -43,7 +43,7 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
             if (instance == null || instanceRaw == null || raw != instanceRaw) {
                 instance = load(raw)
                 instanceRaw = raw
-                if (isClientSide) MetroSchemeRenderer.getInstance().onUpdate()
+                if (isClientSide) MetroSchemeExtractor.rebuild(instance!!)
             }
             return instance!!
         }
@@ -53,7 +53,7 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
                 Files.createDirectories(path.parent)
             }
             Files.writeString(path, JSON.encodeToString(info))
-            if (isClientSide) MetroSchemeRenderer.getInstance().onUpdate()
+            if (isClientSide) MetroSchemeExtractor.rebuild(info)
         }
 
         fun getInstance(): SMetroInfo {
@@ -75,7 +75,7 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
         @Environment(EnvType.CLIENT)
         fun endSync(inst: SMetroInfo) {
             syncedInstance = inst
-            MetroSchemeRenderer.getInstance().onUpdate()
+            MetroSchemeExtractor.rebuild(inst)
         }
 
         val STREAM_CODEC: StreamCodec<RegistryFriendlyByteBuf, SMetroInfo> = StreamCodec.composite(

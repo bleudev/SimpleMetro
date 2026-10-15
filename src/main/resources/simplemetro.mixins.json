@@ -2,12 +2,14 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.bleudev.simplemetro.mixin",
+  "plugin": "com.bleudev.simplemetro.plugin.mixin.SMetroMixinPlugin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
   ],
   "client": [
     "client.accessor.xaero.GuiMapAccessor",
-    "client.xaero.GuiMapMixin"
+    "client.xaero.GuiMapMixin",
+    "client.xaero.minimap.MinimapElementOverMapRendererHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

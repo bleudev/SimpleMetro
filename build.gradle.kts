@@ -40,7 +40,6 @@ repositories {
                 url = URI.create("https://api.modrinth.com/maven")
             }
         }
-        // forRepositories(fg.repository) // Uncomment when using ForgeGradle
         filter {
             includeGroup("maven.modrinth")
         }

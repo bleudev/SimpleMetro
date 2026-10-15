@@ -4,10 +4,9 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
-import xaero.map.gui.GuiMap;
 
 @Environment(EnvType.CLIENT)
-@Mixin(GuiMap.class)
+@Mixin(targets = {"xaero.map.gui.GuiMap"})
 public interface GuiMapAccessor {
     @Accessor("cameraX")
     double simplemetro$cameraX();

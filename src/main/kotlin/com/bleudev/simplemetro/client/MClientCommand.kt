@@ -9,6 +9,8 @@ import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
+import net.fabricmc.api.EnvType
+import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.commands.CommandBuildContext
@@ -21,6 +23,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.server.permissions.Permissions
 import net.minecraft.world.phys.Vec3
 
+@Environment(EnvType.CLIENT)
 object MClientCommand {
     fun register(dispatcher: CommandDispatcher<FabricClientCommandSource>, context: CommandBuildContext) {
         dispatcher.register(command(ClientCommands.literal("m"), context))

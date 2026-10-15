@@ -1,8 +1,7 @@
-package com.bleudev.simplemetro.client.util
+package com.bleudev.simplemetro.client.render.xaero
 
-import com.bleudev.simplemetro.config.SMetroInfo
+import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
 import com.bleudev.simplemetro.mixin.client.accessor.xaero.GuiMapAccessor
-import com.bleudev.simplemetro.obj.MetroLine
 import com.bleudev.simplemetro.obj.MetroStation
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
@@ -13,51 +12,20 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTextTooltip
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner
-import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.TextColor
 import net.minecraft.util.ARGB
 import net.minecraft.util.FormattedCharSequence
-import xaero.map.gui.GuiMap
 import java.lang.reflect.Modifier
 import kotlin.math.*
 
 @Environment(EnvType.CLIENT)
-class MetroSchemeRenderer private constructor() {
-    private var needsRebuild: Boolean = true
-    private val stationRenderStates = hashMapOf<Int, StationRenderState>()
-    private val connectionRenderStates = arrayListOf<ConnectionRenderState>()
+object XaeroMapSchemeRenderer {
+    private val renderState: MetroSchemeExtractor.SchemeRenderState get() = MetroSchemeExtractor.getInstance().extractRenderState()
 
-    fun tick() {
-        if (needsRebuild) {
-            needsRebuild = false
-            stationRenderStates.clear()
-            connectionRenderStates.clear()
-
-            val lmap = SMetroInfo.getInstance().lines.associateBy { it.id }
-            for ((id, pos, name, transfers, status) in SMetroInfo.getInstance().stations) {
-                stationRenderStates[id] = StationRenderState(id, pos, name, listOf(), transfers, status)
-            }
-            for (line in lmap.values) {
-                for ((cr, nx) in line.stations.zipWithNext()) {
-                    connectionRenderStates.add(ConnectionRenderState(stationRenderStates[cr]!!.pos, stationRenderStates[nx]!!.pos, line.color))
-
-                    for (tr in stationRenderStates[cr]!!.transfers) {
-                        connectionRenderStates.add(ConnectionRenderState(stationRenderStates[cr]!!.pos, stationRenderStates[tr]!!.pos, 0x555555))
-                    }
-
-                    stationRenderStates[cr] = stationRenderStates[cr]!!.addLine(line)
-                    stationRenderStates[nx] = stationRenderStates[nx]!!.addLine(line)
-                }
-            }
-        }
-    }
-
-    fun onUpdate() {
-        needsRebuild = true
-    }
-
-    fun extractRenderState(map: GuiMap, extractor: GuiGraphicsExtractor, scaledMouseX: Int, scaledMouseY: Int) {
+    @JvmStatic
+    // Map is GuiMap
+    internal fun extractRenderState(map: Any, extractor: GuiGraphicsExtractor, scaledMouseX: Int, scaledMouseY: Int) {
         val width = extractor.guiWidth()
         val height = extractor.guiHeight()
 
@@ -83,11 +51,11 @@ class MetroSchemeRenderer private constructor() {
                 return !(drawX < -10.0) && !(drawY < -10.0) && !(drawX > (width + 10)) && !(drawY > (height + 10))
             }
 
-            for (connection in connectionRenderStates) {
+            for (connection in renderState.connections) {
                 drawConnection(extractor, connection, ::drawCoords)
             }
             var delayed: (() -> Unit)? = null
-            for (station in stationRenderStates.values) {
+            for (station in renderState.stations.values) {
                 val (drawX, drawY) = drawCoords(station.pos.x, station.pos.z)
                 if (doNotCull(drawX, drawY)) {
                     drawStation(extractor, station, drawX, drawY, scaledMouseX.toFloat(), scaledMouseY.toFloat(), pixelScale)?.let { delayed = it }
@@ -97,7 +65,7 @@ class MetroSchemeRenderer private constructor() {
         }
     }
 
-    private fun drawStation(extractor: GuiGraphicsExtractor, station: StationRenderState, drawX: Float, drawY: Float, mouseX: Float, mouseY: Float, pixelScale: Double): (() -> Unit)? {
+    private fun drawStation(extractor: GuiGraphicsExtractor, station: MetroSchemeExtractor.StationRenderState, drawX: Float, drawY: Float, mouseX: Float, mouseY: Float, pixelScale: Double): (() -> Unit)? {
         extractor.pose().pushMatrix()
         extractor.pose().translate(drawX, drawY)
 
@@ -146,7 +114,7 @@ class MetroSchemeRenderer private constructor() {
         return null
     }
 
-    private fun GuiGraphicsExtractor.stationTooltip(station: StationRenderState) {
+    private fun GuiGraphicsExtractor.stationTooltip(station: MetroSchemeExtractor.StationRenderState) {
         val space = ClientTextTooltip(FormattedCharSequence.EMPTY)
 
         val lines = arrayListOf<ClientTooltipComponent>(StationLinesNameTooltipComponent(station.lines, station.name, station.status))
@@ -165,7 +133,7 @@ class MetroSchemeRenderer private constructor() {
                 else Component.translatable("xaero.map.station.tooltip.transfers.some")
             ).visualOrderText))
             for (transfer in station.transfers) {
-                stationRenderStates[transfer]?.let { state ->
+                renderState.stations[transfer]?.let { state ->
                     lines.add(StationLinesNameTooltipComponent(state.lines, state.name, state.status))
                 }
             }
@@ -177,7 +145,7 @@ class MetroSchemeRenderer private constructor() {
         tooltip(Minecraft.getInstance().font, lines.toList(), 0, 0, DefaultTooltipPositioner.INSTANCE, null, false)
     }
 
-    private fun drawConnection(extractor: GuiGraphicsExtractor, connection: ConnectionRenderState, drawCoords: (Int, Int) -> Pair<Float, Float>) {
+    private fun drawConnection(extractor: GuiGraphicsExtractor, connection: MetroSchemeExtractor.ConnectionRenderState, drawCoords: (Int, Int) -> Pair<Float, Float>) {
         val x1 = connection.pos1.x
         val z1 = connection.pos1.z
         val x2 = connection.pos2.x
@@ -222,24 +190,12 @@ class MetroSchemeRenderer private constructor() {
         return fallback
     }
 
-    companion object {
-        private var instance: MetroSchemeRenderer? = null
-
-        @JvmStatic
-        fun getInstance(): MetroSchemeRenderer {
-            if (instance == null) {
-                instance = MetroSchemeRenderer()
-            }
-            return instance!!
-        }
-    }
-
     private class StationLinesNameTooltipComponent(
-        lines: List<StationLineRenderState>,
+        lines: List<MetroSchemeExtractor.StationLineRenderState>,
         private val name: String,
         private val status: MetroStation.Status,
     ) : ClientTooltipComponent {
-        private val lines: List<StationLineRenderState> = lines.sortedBy { it.id }
+        private val lines: List<MetroSchemeExtractor.StationLineRenderState> = lines.sortedBy { it.id }
 
         override fun getHeight(font: Font): Int = font.lineHeight + 1
         override fun getWidth(font: Font): Int = font.width(name) + 8 * lines.size
@@ -265,29 +221,5 @@ class MetroSchemeRenderer private constructor() {
             }
             graphics.text(font, styledName, x, y, nameColor)
         }
-    }
-
-    private data class StationLineRenderState(val id: Int, val name: String, val color: Int)
-
-    private data class StationRenderState(
-        val id: Int,
-        val pos: BlockPos,
-        val name: String,
-        val lines: List<StationLineRenderState>,
-        val transfers: List<Int>,
-        val status: MetroStation.Status
-    ) {
-        val schemeColors: List<Int> get() = if (lines.isEmpty()) listOf(ARGB.white(.9f)) else lines.map { ARGB.color(.9f, it.color) }
-        val whiteColor: Int get() = ARGB.color(.9f, 0xffffff)
-        val grayColor: Int get() = ARGB.color(.9f, TextColor.GRAY.value)
-
-        fun addLine(line: MetroLine): StationRenderState = StationRenderState(
-            id, pos, name,
-            HashSet(lines).apply { add(StationLineRenderState(line.id, line.name, line.color)) }.toList(),
-            transfers, status
-        )
-    }
-    private data class ConnectionRenderState(val pos1: BlockPos, val pos2: BlockPos, val color: Int) {
-        val argbColor: Int get() = ARGB.color(.8f, color)
     }
 }
