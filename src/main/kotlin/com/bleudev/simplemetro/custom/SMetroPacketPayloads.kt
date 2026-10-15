@@ -19,4 +19,8 @@ object SMetroPacketPayloads {
     fun initializeServer() {
         serverbound(ServerboundMetroInfoEdit)
     }
+
+    fun initializeClient() {
+        serverbound(ServerboundMetroInfoEdit)
+    }
 }

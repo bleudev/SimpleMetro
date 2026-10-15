@@ -29,11 +29,12 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
         private var syncedInstance: SMetroInfo? = null
 
         private fun load(s: String): SMetroInfo {
+            var s = s
             if (!Files.exists(path)) {
                 Files.createDirectories(path.parent)
-                Files.writeString(path, Json.encodeToString(SMetroInfo()))
+                s = Json.encodeToString(SMetroInfo())
+                Files.writeString(path, s)
             }
-
             return JSON.decodeFromString(s)
         }
 
