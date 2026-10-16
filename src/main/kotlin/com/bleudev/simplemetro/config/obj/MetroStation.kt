@@ -20,19 +20,21 @@ data class MetroStation(val id: Int, var pos: BlockPos, var name: String, var tr
         CLOSED_REPAIR(Component.translatable("xaero.map.station.tooltip.status.closed_repair")),
         UNDER_CONSTRUCTION(Component.translatable("xaero.map.station.tooltip.status.under_construction")),
         PLANNED(Component.translatable("xaero.map.station.tooltip.status.planned")),
-        INVISIBLE;
+        INVISIBLE,
+        UNKNOWN(Component.translatable("xaero.map.station.tooltip.status.unknown"));
 
         val open: Boolean get() = this == OPEN
         val invisible: Boolean get() = this == INVISIBLE
+        val unknown: Boolean get() = this == UNKNOWN
 
         override fun getSerializedName(): String = name.lowercase()
 
         companion object {
             fun fromNameOrNull(name: String): Status? = entries.toList().firstOrNull { it.serializedName == name }
-            fun fromName(name: String): Status = fromNameOrNull(name) ?: throw NoSuchElementException("Unknown status with name $name")
+            fun fromNameOrFallback(name: String): Status = fromNameOrNull(name) ?: UNKNOWN
             val STREAM_CODEC: StreamCodec<RegistryFriendlyByteBuf, Status> = StreamCodec.composite(
                 ByteBufCodecs.STRING_UTF8, Status::getSerializedName,
-                ::fromName
+                ::fromNameOrFallback
             )
         }
     }
