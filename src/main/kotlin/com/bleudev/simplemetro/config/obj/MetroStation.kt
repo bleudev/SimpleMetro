@@ -1,5 +1,6 @@
 @file:UseSerializers(BlockPosSerializer::class)
-package com.bleudev.simplemetro.obj
+
+package com.bleudev.simplemetro.config.obj
 
 import io.netty.buffer.ByteBuf
 import kotlinx.serialization.Serializable
@@ -18,9 +19,11 @@ data class MetroStation(val id: Int, var pos: BlockPos, var name: String, var tr
         CLOSED_TEMP(Component.translatable("xaero.map.station.tooltip.status.closed_temp")),
         CLOSED_REPAIR(Component.translatable("xaero.map.station.tooltip.status.closed_repair")),
         UNDER_CONSTRUCTION(Component.translatable("xaero.map.station.tooltip.status.under_construction")),
-        PLANNED(Component.translatable("xaero.map.station.tooltip.status.planned"));
+        PLANNED(Component.translatable("xaero.map.station.tooltip.status.planned")),
+        INVISIBLE;
 
-        val isOpen: Boolean get() = this == OPEN
+        val open: Boolean get() = this == OPEN
+        val invisible: Boolean get() = this == INVISIBLE
 
         override fun getSerializedName(): String = name.lowercase()
 

@@ -1,4 +1,4 @@
-package com.bleudev.simplemetro.obj
+package com.bleudev.simplemetro.config.obj
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.IntArraySerializer

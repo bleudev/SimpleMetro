@@ -56,12 +56,14 @@ internal open class XaeroCommonSchemeRenderer {
     }
 
     protected open fun drawStation(extractor: CommonGraphicsExtractor, station: MetroSchemeExtractor.StationRenderState) {
+        if (station.status.invisible) return
+
         val colors = station.schemeColors
 
         extractor.pushPose()
         extractor.translate(extractor.drawPos(station.pos))
         extractor.scale(extractor.mapScale())
-        if (station.status.isOpen) {
+        if (station.status.open) {
             // Only 4 colors(
             extractor.fill(-4, -4, 4, 4, colors[0])
             if (colors.size >= 2) {
@@ -86,7 +88,7 @@ internal open class XaeroCommonSchemeRenderer {
         val lerp = { col: Int -> ARGB.srgbLerp(alpha, ARGB.color(0f, col), ARGB.color(1f, col)) }
         extractor.pushPose()
         extractor.scale(.75f)
-        if (station.status.isOpen) {
+        if (station.status.open) {
             if (station.lines.size == 1) {
                 extractor.centeredText(font, station.lines[0].id.toString(), 0, -4, ARGB.white(alpha))
                 extractor.centeredText(font, station.name, 0, 8, lerp(station.lines[0].color))

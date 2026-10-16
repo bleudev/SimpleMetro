@@ -1,4 +1,4 @@
-package com.bleudev.simplemetro.obj
+package com.bleudev.simplemetro.config.obj
 
 import io.netty.buffer.ByteBuf
 import kotlinx.serialization.Serializable

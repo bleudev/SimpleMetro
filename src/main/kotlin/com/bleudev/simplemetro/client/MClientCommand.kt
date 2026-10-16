@@ -1,8 +1,8 @@
 package com.bleudev.simplemetro.client
 
 import com.bleudev.simplemetro.config.SMetroInfo
-import com.bleudev.simplemetro.obj.MetroLine
-import com.bleudev.simplemetro.obj.MetroStation
+import com.bleudev.simplemetro.config.obj.MetroLine
+import com.bleudev.simplemetro.config.obj.MetroStation
 import com.bleudev.simplemetro.util.idModOnServer
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.IntegerArgumentType

@@ -1,8 +1,8 @@
 package com.bleudev.simplemetro.client.render
 
 import com.bleudev.simplemetro.config.SMetroInfo
-import com.bleudev.simplemetro.obj.MetroLine
-import com.bleudev.simplemetro.obj.MetroStation
+import com.bleudev.simplemetro.config.obj.MetroLine
+import com.bleudev.simplemetro.config.obj.MetroStation
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.core.BlockPos

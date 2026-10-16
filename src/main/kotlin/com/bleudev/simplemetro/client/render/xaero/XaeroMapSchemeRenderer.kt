@@ -1,8 +1,8 @@
 package com.bleudev.simplemetro.client.render.xaero
 
 import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
+import com.bleudev.simplemetro.config.obj.MetroStation
 import com.bleudev.simplemetro.mixin.client.accessor.xaero.GuiMapAccessor
-import com.bleudev.simplemetro.obj.MetroStation
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.ChatFormatting
@@ -80,6 +80,8 @@ internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
         mouseX: Float,
         mouseY: Float,
     ) {
+        if (station.status.invisible) return
+
         extractor.pose().pushMatrix()
         extractor.pose().translate(mouseX, mouseY)
 
@@ -147,8 +149,8 @@ internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
         override fun extractText(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) {
             var x = x
             var styledName = Component.literal(name)
-            var nameColor = ARGB.color(1f, if (status.isOpen) if (lines.size == 1) lines[0].color else 0xffffff else TextColor.GRAY.value)
-            if (status.isOpen) {
+            var nameColor = ARGB.color(1f, if (status.open) if (lines.size == 1) lines[0].color else 0xffffff else TextColor.GRAY.value)
+            if (status.open) {
                 nameColor = ARGB.setBrightness(nameColor, .9f)
             } else {
                 styledName = styledName.withStyle(ChatFormatting.ITALIC)
