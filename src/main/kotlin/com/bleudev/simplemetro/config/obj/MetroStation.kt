@@ -14,6 +14,7 @@ import net.minecraft.util.StringRepresentable
 
 @Serializable
 data class MetroStation(val id: Int, var pos: BlockPos, var name: String, var transfers: List<Int> = listOf(), var status: Status = Status.OPEN) {
+    @Serializable(StationStatusSerializer::class)
     enum class Status(val message: Component? = null) : StringRepresentable {
         OPEN,
         CLOSED_TEMP(Component.translatable("xaero.map.station.tooltip.status.closed_temp")),
