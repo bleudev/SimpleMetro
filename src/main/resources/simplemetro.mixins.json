@@ -7,7 +7,6 @@
   "mixins": [
   ],
   "client": [
-    "client.accessor.xaero.GuiMapAccessor",
     "client.xaero.GuiMapMixin",
     "client.xaero.minimap.MinimapElementMapRendererHandlerMixin"
   ],

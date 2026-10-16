@@ -2,7 +2,6 @@ package com.bleudev.simplemetro.client.render.xaero
 
 import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.obj.MetroStation
-import com.bleudev.simplemetro.mixin.client.accessor.xaero.GuiMapAccessor
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.ChatFormatting
@@ -25,22 +24,20 @@ internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
     private var pixelScale: Float = 0f
 
     @JvmStatic
-    // Map is GuiMap
-    internal fun extractRenderState(map: Any, extractor: GuiGraphicsExtractor, scaledMouseX: Int, scaledMouseY: Int) {
+    internal fun extractRenderState(
+        extractor: GuiGraphicsExtractor,
+        scaledMouseX: Int,
+        scaledMouseY: Int,
+        cameraX: Double,
+        cameraZ: Double,
+        pixelScale: Double,
+        mapScreenScale: Double
+    ) {
         this.width = extractor.guiWidth()
         this.height = extractor.guiHeight()
-
-        val i = (map as GuiMapAccessor)
-        val cameraX = i.`simplemetro$cameraX`()
-        val cameraZ = i.`simplemetro$cameraZ`()
-        var pixelScale = i.`simplemetro$scale`()
-        if (pixelScale <= 0f) {
-            pixelScale = i.`simplemetro$userScale`()
-        }
         this.pixelScale = pixelScale.toFloat()
 
         if (pixelScale > 0) {
-            val mapScreenScale = getIntField(map, "screenScale", 1).toDouble()
             val scale = pixelScale / mapScreenScale
 
             val adapter = object : MapGraphicsExtractor(extractor) {

@@ -9,7 +9,7 @@ public class SMetroMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.startsWith("com.bleudev.simplemetro.mixin.client.xaero.minimap")) {
             return FabricLoader.getInstance().isModLoaded("xaerominimap");
         }
-        if (mixinClassName.startsWith("com.bleudev.simplemetro.mixin.client.xaero") || mixinClassName.startsWith("com.bleudev.simplemetro.mixin.client.accessor.xaero")) {
+        if (mixinClassName.startsWith("com.bleudev.simplemetro.mixin.client.xaero")) {
             return FabricLoader.getInstance().isModLoaded("xaeroworldmap");
         }
         return true;
