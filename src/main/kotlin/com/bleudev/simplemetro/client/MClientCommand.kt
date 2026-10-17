@@ -39,7 +39,7 @@ object MClientCommand {
             .then(ClientCommands
                 .literal("station")
                 .then(ClientCommands
-                    .literal("create")
+                    .literal("add")
                     .then(ClientCommands
                         .argument("pos", BlockPosArgument.blockPos())
                         .then(ClientCommands
@@ -49,12 +49,28 @@ object MClientCommand {
                                     ctx.getClientBlockPos("pos"),
                                     StringArgumentType.getString(ctx, "name")
                                 ).also { if (it == -1) {
-                                    ctx.source.sendError(Component.translatable("commands.metro.station.create.error.position"))
+                                    ctx.source.sendError(Component.translatable("commands.metro.station.add.error.position"))
                                 } else {
-                                    ctx.source.sendFeedback(Component.translatable("commands.metro.station.create.success", it))
+                                    ctx.source.sendFeedback(Component.translatable("commands.metro.station.add.success", it))
                                 }}
                             }
                         )
+                    )
+                )
+                .then(ClientCommands
+                    .literal("remove")
+                    .then(ClientCommands
+                        .argument("id", IntegerArgumentType.integer(1))
+                        .executes { ctx ->
+                            val id = IntegerArgumentType.getInteger(ctx, "id")
+                            removeStation(id).also {
+                                if (it == 1) {
+                                    ctx.source.sendFeedback(Component.translatable("commands.metro.station.remove.success"))
+                                } else {
+                                    ctx.source.sendError(Component.translatable("commands.metro.station.remove.error.unknown", id))
+                                }
+                            }
+                        }
                     )
                 )
                 .then(ClientCommands
@@ -242,6 +258,27 @@ object MClientCommand {
             stations.add(MetroStation(id, pos, name, listOf(), MetroStation.Status.OPEN))
             SMetroInfo.save(SMetroInfo(stations.toList(), info.lines))
             return id
+        } else {
+            return -1
+        }
+    }
+
+    private fun removeStation(id: Int): Int {
+        val info = SMetroInfo.getInstance()
+        val stations = info.stations.toMutableList()
+        if (stations.removeIf { it.id == id }) {
+            val lines = info.lines.map { l ->
+                l.stations = l.stations.filter { it != id }
+                l
+            }
+            val st = stations.toList().map { s ->
+                if (s.id != id) {
+                    s.transfers = s.transfers.filter { it != id }
+                }
+                s
+            }
+            SMetroInfo.save(SMetroInfo(st, lines))
+            return 1
         } else {
             return -1
         }
