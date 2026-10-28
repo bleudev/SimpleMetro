@@ -9,13 +9,18 @@ import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.TextColor
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 @Environment(EnvType.CLIENT)
 internal class MetroSchemeExtractor {
     private var renderState: HashMap<Identifier, SchemeRenderState> = hashMapOf()
+    private var adjacencyMatrices: HashMap<Identifier, AdjacencyMatrix> = hashMapOf()
 
     private fun rebuild(dimMap: Map<Identifier, SMetroInfo>) {
         renderState.clear()
+        adjacencyMatrices.clear()
+        PathSearcher.getInstance().rebuild()
         for ((dim, info) in dimMap) rebuild(dim, info)
     }
 
@@ -58,6 +63,37 @@ internal class MetroSchemeExtractor {
         }
 
         renderState[dim] = SchemeRenderState(stations, connections)
+
+        // Build adjacency matrix
+        val matrix = AdjacencyMatrix(stations.size)
+
+        matrix.fill { i, j ->
+            if (i == j) return@fill 0.0
+            else {
+                val si = stations[i]
+                val sj = stations[j]
+                if (si == null || sj == null) return@fill null
+
+                val isTransfer = j in si.transfers || i in sj.transfers
+                var bestSqr: Double? = if (isTransfer) si.pos.distSqr(sj.pos) else null
+                // Check every line `i` has. `j` must be neighbor!
+                for ((lineId) in si.lines) {
+                    lmap[lineId]?.let { line ->
+                        val ii = line.stations.indexOf(i)
+                        val ji = line.stations.indexOf(j)
+                        if (ii >= 0 && ji >= 0 && abs(ii-ji) == 1) {
+                            val d = si.pos.distSqr(sj.pos)
+                            if (bestSqr == null || d < bestSqr) {
+                                bestSqr = d
+                            }
+                        }
+                    }
+                }
+                return@fill bestSqr?.let(::sqrt)
+            }
+        }
+        adjacencyMatrices[dim] = matrix
+        PathSearcher.getInstance().rebuild(dim)
     }
 
     fun extractRenderState(dim: Identifier): SchemeRenderState {
@@ -65,6 +101,12 @@ internal class MetroSchemeExtractor {
             rebuild(dim, SMetroInfo.getInstance(dim))
         }
         return renderState[dim]!!
+    }
+    fun extractAdjacencyMatrix(dim: Identifier): AdjacencyMatrix {
+        if (adjacencyMatrices[dim] == null) {
+            rebuild(dim, SMetroInfo.getInstance(dim))
+        }
+        return adjacencyMatrices[dim]!!
     }
 
     companion object {
@@ -84,7 +126,17 @@ internal class MetroSchemeExtractor {
     }
 
 
-    data class StationLineRenderState(val id: Int, val name: String, val color: Int)
+    data class StationLineRenderState(val id: Int, val name: String, val color: Int) {
+        override fun equals(other: Any?): Boolean {
+            return other is StationLineRenderState && other.id == id
+        }
+        override fun hashCode(): Int {
+            var result = id
+            result = 31 * result + color
+            result = 31 * result + name.hashCode()
+            return result
+        }
+    }
 
     data class StationRenderState(
         val id: Int,
@@ -109,4 +161,41 @@ internal class MetroSchemeExtractor {
     }
 
     data class SchemeRenderState(val stations: Map<Int, StationRenderState>, val connections: List<ConnectionRenderState>)
+    
+    class AdjacencyMatrix(initialSize: Int) {
+        private var array = buildArray(initialSize)
+        var size = initialSize
+            private set
+            
+        private fun buildArray(size: Int): Array<Array<Double?>> {
+            return Array(size) { Array(size) { null } }
+        }
+        
+        fun resize(size: Int) {
+            this.array = buildArray(size)
+            this.size = size
+        }
+        
+        operator fun get(i: Int, j: Int): Double? {
+            return this.array[i-1][j-1]
+        }
+        operator fun set(i: Int, j: Int, value: Double?) {
+            this.array[i-1][j-1] = value
+            this.array[j-1][i-1] = value
+        }
+
+        fun fill(filler: (i: Int, j: Int) -> Double?) {
+            for (i in 1..size) {
+                for (j in i..size) {
+                    this[i, j] = filler(i, j)
+                }
+            }
+        }
+
+        fun toList(): List<List<Double?>> {
+            return this.array.toList().map { it.toList() }
+        }
+
+        override fun toString(): String = this.array.contentDeepToString()
+    }
 }
