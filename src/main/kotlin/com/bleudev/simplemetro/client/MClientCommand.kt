@@ -72,7 +72,7 @@ object MClientCommand {
                                 if (it == 1) {
                                     ctx.source.sendFeedback(Component.translatable("commands.metro.station.remove.success"))
                                 } else {
-                                    ctx.source.sendError(Component.translatable("commands.metro.station.remove.error.unknown", id))
+                                    ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown", id))
                                 }
                             }
                         }
@@ -92,7 +92,7 @@ object MClientCommand {
                                     if (it == 1) {
                                         ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
                                     } else {
-                                        ctx.source.sendError(Component.translatable("commands.metro.station.update.error.dont_exist"))
+                                        ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown"))
                                     }
                                 }
                             }
@@ -110,7 +110,7 @@ object MClientCommand {
                                     if (it == 1) {
                                         ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
                                     } else {
-                                        ctx.source.sendError(Component.translatable("commands.metro.station.update.error.dont_exist"))
+                                        ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown"))
                                     }
                                 }
                             }
@@ -142,7 +142,7 @@ object MClientCommand {
                                         if (it == 1) {
                                             ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
                                         } else {
-                                            ctx.source.sendError(Component.translatable("commands.metro.station.update.error.dont_exist"))
+                                            ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown"))
                                         }
                                     }
                                 }
@@ -157,7 +157,7 @@ object MClientCommand {
                                 val transfers = StringArgumentType.getString(ctx, "transfers").split(" ").map { s ->
                                     val t = s.toIntOrNull()
                                     if (t == null || SMetroInfo.getInstance(dim).stations.all { it.id != t }) {
-                                        ctx.source.sendError(Component.translatable("commands.metro.stations.error.unknown", t.toString()))
+                                        ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown", t.toString()))
                                         return@executes -1
                                     }
                                     t
@@ -166,10 +166,147 @@ object MClientCommand {
                                     if (it == 1) {
                                         ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
                                     } else {
-                                        ctx.source.sendError(Component.translatable("commands.metro.station.update.error.dont_exist"))
+                                        ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown"))
                                     }
                                 }
                             }
+                        )
+                    )
+
+                    .then(ClientCommands
+                        .literal("place")
+                        .then(ClientCommands
+                            .argument("line", IntegerArgumentType.integer(1))
+                            .then(ClientCommands
+                                .literal("add")
+                                .then(ClientCommands
+                                    .literal("corner")
+                                    .then(ClientCommands
+                                        .argument("corner_id", IntegerArgumentType.integer(1))
+                                        .executes { ctx ->
+                                            val id = IntegerArgumentType.getInteger(ctx, "id")
+                                            val line = IntegerArgumentType.getInteger(ctx, "line")
+                                            val cornerId = IntegerArgumentType.getInteger(ctx, "corner_id")
+                                            placeStationAdd(
+                                                id,
+                                                line,
+                                                listOf(cornerId)
+                                            ).also {
+                                                when (it) {
+                                                    1 -> {
+                                                        ctx.source.sendFeedback(Component.translatable("commands.metro.station.place.add.success", line))
+                                                    }
+                                                    2 -> {
+                                                        ctx.source.sendFeedback(Component.translatable("commands.metro.station.place.add.success.line", line))
+                                                    }
+                                                    -1 -> {
+                                                        ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown", id))
+                                                    }
+                                                    -2 -> {
+                                                        ctx.source.sendError(Component.translatable("commands.metro.station.place.corner.error.corner_id", cornerId))
+                                                    }
+                                                    else -> if (it < 0) {
+                                                        ctx.source.sendError(Component.translatable("commands.metro.generic.error.unknown", it))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    )
+                                    .executes { ctx ->
+                                        val id = IntegerArgumentType.getInteger(ctx, "id")
+                                        val line = IntegerArgumentType.getInteger(ctx, "line")
+                                        placeStationAdd(
+                                            id,
+                                            line,
+                                            listOf()
+                                        ).also {
+                                            when (it) {
+                                                1 -> {
+                                                    ctx.source.sendFeedback(Component.translatable("commands.metro.station.place.add.success", line))
+                                                }
+                                                2 -> {
+                                                    ctx.source.sendFeedback(Component.translatable("commands.metro.station.place.add.success.line", line))
+                                                }
+                                                -1 -> {
+                                                    ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown", id))
+                                                }
+                                                else -> if (it < 0) {
+                                                    ctx.source.sendError(Component.translatable("commands.metro.generic.error.unknown", it))
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                                .then(ClientCommands
+                                    .literal("between")
+                                    .then(ClientCommands
+                                        .argument("id1", IntegerArgumentType.integer(1))
+                                        .then(ClientCommands
+                                            .argument("id2", IntegerArgumentType.integer(1))
+                                            .executes { ctx ->
+                                                val id = IntegerArgumentType.getInteger(ctx, "id")
+                                                val line = IntegerArgumentType.getInteger(ctx, "line")
+                                                placeStationAdd(
+                                                    id,
+                                                    line,
+                                                    listOf(
+                                                        IntegerArgumentType.getInteger(ctx, "id1"),
+                                                        IntegerArgumentType.getInteger(ctx, "id2")
+                                                    )
+                                                ).also {
+                                                    when (it) {
+                                                        1 -> {
+                                                            ctx.source.sendFeedback(Component.translatable("commands.metro.station.place.add.success", line))
+                                                        }
+                                                        2 -> {
+                                                            ctx.source.sendFeedback(Component.translatable("commands.metro.station.place.add.success.line", line))
+                                                        }
+                                                        -1 -> {
+                                                            ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown", id))
+                                                        }
+                                                        -3 -> {
+                                                            ctx.source.sendError(Component.translatable("commands.metro.station.place.between.error.not_neighbors"))
+                                                        }
+                                                        else -> if (it < 0) {
+                                                            ctx.source.sendError(Component.translatable("commands.metro.generic.error.unknown", it))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    )
+                                )
+
+                            )
+                            .then(ClientCommands
+                                .literal("remove")
+                                .executes { ctx ->
+                                    val id = IntegerArgumentType.getInteger(ctx, "id")
+                                    val line = IntegerArgumentType.getInteger(ctx, "line")
+                                    placeStationRemove(
+                                        id,
+                                        line
+                                    ).also {
+                                        when (it) {
+                                            1 -> {
+                                                ctx.source.sendFeedback(Component.translatable("commands.metro.station.place.remove.success", line))
+                                            }
+                                            -1 -> {
+                                                ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown", id))
+                                            }
+                                            -2 -> {
+                                                ctx.source.sendError(Component.translatable("commands.metro.generic.line.unknown", line))
+                                            }
+                                            -3 -> {
+                                                ctx.source.sendError(Component.translatable("commands.metro.station.place.remove.error.not_placed", line))
+                                            }
+                                            else -> if (it < 0) {
+                                                ctx.source.sendError(Component.translatable("commands.metro.generic.error.unknown", it))
+                                            }
+                                        }
+                                    }
+                                }
+                            )
                         )
                     )
                 )
@@ -233,7 +370,7 @@ object MClientCommand {
                                 val st = StringArgumentType.getString(ctx, "stations").split(" ").map { s ->
                                     val t = s.toIntOrNull()
                                     if (t == null || SMetroInfo.getInstance(dim).stations.all { it.id != t }) {
-                                        ctx.source.sendError(Component.translatable("commands.metro.stations.error.unknown", t.toString()))
+                                        ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown", t.toString()))
                                         return@executes -1
                                     }
                                     t
@@ -338,6 +475,85 @@ object MClientCommand {
             it
         }
         SMetroInfo.save(dim, SMetroInfo(stations.toList(), info.lines))
+        return 1
+    }
+
+    /**
+     * 2 Done + New line created
+     * 1 Done
+     * -1 Station doesn't exist
+     * -2 Around method for corners failed (id isn't corner)
+     * -3 Between method ids isn't neighbors
+     * */
+    private fun placeStationAdd(id: Int, lineId: Int, betweenOrAround: List<Int>): Int {
+        val info = SMetroInfo.getInstance(dim)
+        val lines = info.lines.toMutableList()
+        if (info.stations.none { it.id == id }) return -1
+        val i = lines.indexOfFirst { it.id == lineId }
+        var stations = mutableListOf<Int>()
+        if (i != -1) stations = lines[i].stations.toMutableList()
+        stations.remove(id) // Ensure this station isn't placed
+
+        // Corner method
+        if (betweenOrAround.isEmpty()) {
+            if (stations.size < 2) stations.add(id)
+            else {
+                val pos1 = info.stations.first { it.id == stations.first() }.pos
+                val pos2 = info.stations.first { it.id == stations.last() }.pos
+                val pos0 = info.stations.first { it.id == id }.pos
+
+                if (pos0.distSqr(pos1) <= pos0.distSqr(pos2)) {
+                    stations.add(0, id)
+                } else {
+                    stations.add(id)
+                }
+            }
+        }
+        // Around method
+        else {
+            if (stations.size < 2) stations.add(id)
+            else {
+                // ONLY FOR CORNERS
+                if (betweenOrAround.size == 1) {
+                    if (stations.first() == betweenOrAround[0]) {
+                        stations.add(0, id)
+                    } else if (stations.last() == betweenOrAround[0]) {
+                        stations.add(id)
+                    } else return -2
+                }
+                else if (betweenOrAround.size == 2) {
+                    val j = stations.indexOf(betweenOrAround.first())
+                    val k = stations.indexOf(betweenOrAround.last())
+                    val (j1, k1) = listOf(j, k).sorted()
+                    if (k1-j1 == 1) {
+                        stations.add(k1, id)
+                    } else return -3
+                }
+            }
+        }
+        return addOrUpdateLine(lineId) {
+            it.stations = stations.toList()
+            it
+        }
+    }
+
+    /**
+     * 1 Done
+     * -1 Station doesn't exist
+     * -2 Line doesn't exist
+     * -3 Stations isn't placed in this line
+     * */
+    private fun placeStationRemove(id: Int, lineId: Int): Int {
+        val info = SMetroInfo.getInstance(dim)
+        val lines = info.lines.toMutableList()
+        if (info.stations.none { it.id == id }) return -1
+        val i = lines.indexOfFirst { it.id == lineId }
+        if (i == -1) return -2
+        val stations = lines[i].stations.toMutableList()
+        if (id !in stations) return -3
+        stations.remove(id)
+        lines[i].stations = stations.toList()
+        SMetroInfo.save(dim, SMetroInfo(info.stations, lines.toList()))
         return 1
     }
 
