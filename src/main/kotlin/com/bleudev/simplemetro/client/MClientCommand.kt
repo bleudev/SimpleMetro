@@ -8,6 +8,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.builder.RequiredArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
@@ -24,6 +25,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import net.minecraft.server.permissions.Permissions
+import net.minecraft.util.ARGB
 import net.minecraft.world.phys.Vec3
 
 @Environment(EnvType.CLIENT)
@@ -64,8 +66,7 @@ object MClientCommand {
                 )
                 .then(ClientCommands
                     .literal("remove")
-                    .then(ClientCommands
-                        .argument("id", IntegerArgumentType.integer(1))
+                    .then(stationIdArgument("id")
                         .executes { ctx ->
                             val id = IntegerArgumentType.getInteger(ctx, "id")
                             removeStation(id).also {
@@ -78,8 +79,7 @@ object MClientCommand {
                         }
                     )
                 )
-                .then(ClientCommands
-                    .argument("id", IntegerArgumentType.integer(1))
+                .then(stationIdArgument("id")
                     .then(ClientCommands
                         .literal("pos")
                         .then(ClientCommands
@@ -175,14 +175,12 @@ object MClientCommand {
 
                     .then(ClientCommands
                         .literal("place")
-                        .then(ClientCommands
-                            .argument("line", IntegerArgumentType.integer(1))
+                        .then(lineIdArgument("line")
                             .then(ClientCommands
                                 .literal("add")
                                 .then(ClientCommands
                                     .literal("corner")
-                                    .then(ClientCommands
-                                        .argument("corner_id", IntegerArgumentType.integer(1))
+                                    .then(stationIdArgument("corner_id")
                                         .executes { ctx ->
                                             val id = IntegerArgumentType.getInteger(ctx, "id")
                                             val line = IntegerArgumentType.getInteger(ctx, "line")
@@ -239,10 +237,8 @@ object MClientCommand {
                                 )
                                 .then(ClientCommands
                                     .literal("between")
-                                    .then(ClientCommands
-                                        .argument("id1", IntegerArgumentType.integer(1))
-                                        .then(ClientCommands
-                                            .argument("id2", IntegerArgumentType.integer(1))
+                                    .then(stationIdArgument("id1")
+                                        .then(stationIdArgument("id2")
                                             .executes { ctx ->
                                                 val id = IntegerArgumentType.getInteger(ctx, "id")
                                                 val line = IntegerArgumentType.getInteger(ctx, "line")
@@ -265,7 +261,7 @@ object MClientCommand {
                                                             ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown", id))
                                                         }
                                                         -3 -> {
-                                                            ctx.source.sendError(Component.translatable("commands.metro.station.place.between.error.not_neighbors"))
+                                                            ctx.source.sendError(Component.translatable("commands.metro.station.place.add.between.error.not_neighbors"))
                                                         }
                                                         else -> if (it < 0) {
                                                             ctx.source.sendError(Component.translatable("commands.metro.generic.error.unknown", it))
@@ -313,8 +309,7 @@ object MClientCommand {
             )
             .then(ClientCommands
                 .literal("line")
-                .then(ClientCommands
-                    .argument("id", IntegerArgumentType.integer(1))
+                .then(lineIdArgument("id")
                     .then(ClientCommands
                         .literal("name")
                         .then(ClientCommands
@@ -390,6 +385,31 @@ object MClientCommand {
                     )
                 )
             )
+    }
+
+    private fun stationIdArgument(name: String): RequiredArgumentBuilder<FabricClientCommandSource, Int> {
+        return ClientCommands
+            .argument(name, IntegerArgumentType.integer(1))
+            .suggests { _, builder ->
+                SMetroInfo.getInstance(dim).stations.forEach { station ->
+                    if (station.id.toString().startsWith(builder.remainingLowerCase)) {
+                        builder.suggest(station.id, Component.literal(station.name))
+                    }
+                }
+                builder.buildFuture()
+            }
+    }
+    private fun lineIdArgument(name: String): RequiredArgumentBuilder<FabricClientCommandSource, Int> {
+        return ClientCommands
+            .argument(name, IntegerArgumentType.integer(1))
+            .suggests { _, builder ->
+                SMetroInfo.getInstance(dim).lines.forEach { line ->
+                    if (line.id.toString().startsWith(builder.remainingLowerCase)) {
+                        builder.suggest(line.id, Component.literal(line.name).withColor(ARGB.color(1f, line.color)))
+                    }
+                }
+                builder.buildFuture()
+            }
     }
 
     private fun addStation(pos: BlockPos, name: String): Int {
