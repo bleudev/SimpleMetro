@@ -2,7 +2,6 @@ package com.bleudev.simplemetro.client
 
 import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
-import com.bleudev.simplemetro.client.render.PathSearcher
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundMetroInfoSync
@@ -11,14 +10,11 @@ import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
-import net.minecraft.world.level.Level
 import net.minecraft.world.level.storage.LevelResource
-import java.text.DecimalFormat
 
 @Environment(EnvType.CLIENT)
 class SMetroClient : ClientModInitializer {
@@ -43,15 +39,6 @@ class SMetroClient : ClientModInitializer {
 
         listen(ClientboundMetroInfoSync) {
             SMetroInfo.endSync(it.dimensionMap)
-        }
-
-        ClientTickEvents.END_LEVEL_TICK.register { level ->
-            println(MetroSchemeExtractor.getInstance().extractAdjacencyMatrix(Level.OVERWORLD.identifier()).toList().map { l ->
-                val f = DecimalFormat.getInstance()
-                f.maximumIntegerDigits = 3
-                l.map { if (it == null) it else f.format(it) }
-            })
-            println(PathSearcher.getInstance().search(Level.OVERWORLD.identifier(), 1, 8))
         }
     }
 

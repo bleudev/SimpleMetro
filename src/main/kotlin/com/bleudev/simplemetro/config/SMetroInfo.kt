@@ -22,6 +22,7 @@ import net.minecraft.world.level.storage.LevelResource
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.name
+import kotlin.io.path.nameWithoutExtension
 
 @Serializable
 data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: List<MetroLine> = listOf()) {
@@ -39,7 +40,7 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
             var s = s
             if (!Files.exists(pathOf(dim))) {
                 Files.createDirectories(pathOf(dim).parent)
-                s = Json.encodeToString(SMetroInfo())
+                s = JSON.encodeToString(SMetroInfo())
                 Files.writeString(pathOf(dim), s)
             }
             return JSON.decodeFromString(s)
@@ -59,7 +60,7 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
             return Files.walk(basePath).filter {
                 val f = it.toFile()
                 return@filter f.isFile && f.extension == "json"
-            }.map { Identifier.fromNamespaceAndPath(it.parent.name, it.name) }.toList()
+            }.map { Identifier.fromNamespaceAndPath(it.parent.name, it.nameWithoutExtension) }.toList()
         }
 
         private fun internalSave(dim: Identifier, info: SMetroInfo) {
