@@ -5,11 +5,13 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.TextColor
+import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
 import kotlin.math.*
 
-internal open class XaeroCommonSchemeRenderer {
-    protected val renderState: MetroSchemeExtractor.SchemeRenderState get() = MetroSchemeExtractor.getInstance().extractRenderState()
+internal abstract class XaeroCommonSchemeRenderer {
+    abstract val currentDimension: Identifier
+    protected val renderState: MetroSchemeExtractor.SchemeRenderState get() = MetroSchemeExtractor.getInstance().extractRenderState(currentDimension)
 
     protected fun extractRenderState(extractor: CommonGraphicsExtractor): Int? {
         for (connection in renderState.connections) {

@@ -7,13 +7,19 @@ import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.TextColor
+import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
 
 @Environment(EnvType.CLIENT)
 internal class MetroSchemeExtractor {
-    private var renderState: SchemeRenderState? = null
+    private var renderState: HashMap<Identifier, SchemeRenderState> = hashMapOf()
 
-    private fun rebuild(info: SMetroInfo) {
+    private fun rebuild(dimMap: Map<Identifier, SMetroInfo>) {
+        renderState.clear()
+        for ((dim, info) in dimMap) rebuild(dim, info)
+    }
+
+    private fun rebuild(dim: Identifier, info: SMetroInfo) {
         val stations = hashMapOf<Int, StationRenderState>()
         val connections = arrayListOf<ConnectionRenderState>()
 
@@ -51,14 +57,14 @@ internal class MetroSchemeExtractor {
             }
         }
 
-        renderState = SchemeRenderState(stations, connections)
+        renderState[dim] = SchemeRenderState(stations, connections)
     }
 
-    fun extractRenderState(): SchemeRenderState {
-        if (renderState == null) {
-            rebuild(SMetroInfo.getInstance())
+    fun extractRenderState(dim: Identifier): SchemeRenderState {
+        if (renderState[dim] == null) {
+            rebuild(dim, SMetroInfo.getInstance(dim))
         }
-        return renderState!!
+        return renderState[dim]!!
     }
 
     companion object {
@@ -69,8 +75,11 @@ internal class MetroSchemeExtractor {
             }
             return instance!!
         }
-        fun rebuild(info: SMetroInfo) {
-            getInstance().rebuild(info)
+        fun rebuild(dimensionMap: Map<Identifier, SMetroInfo>) {
+            getInstance().rebuild(dimensionMap)
+        }
+        fun rebuild(dimension: Identifier, info: SMetroInfo) {
+            getInstance().rebuild(dimension, info)
         }
     }
 

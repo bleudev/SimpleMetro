@@ -13,6 +13,8 @@ import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
+import net.minecraft.client.Minecraft
+import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.commands.CommandBuildContext
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument
 import net.minecraft.commands.arguments.coordinates.Coordinates
@@ -20,6 +22,7 @@ import net.minecraft.commands.arguments.coordinates.LocalCoordinates
 import net.minecraft.commands.arguments.coordinates.WorldCoordinates
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
+import net.minecraft.resources.Identifier
 import net.minecraft.server.permissions.Permissions
 import net.minecraft.world.phys.Vec3
 
@@ -29,6 +32,8 @@ object MClientCommand {
         dispatcher.register(command(ClientCommands.literal("m"), context))
         dispatcher.register(command(ClientCommands.literal("metro"), context))
     }
+
+    private val dim: Identifier get() = (Minecraft.getInstance().level?.dimension() ?: ClientLevel.OVERWORLD).identifier()
 
     private fun command(
         current: LiteralArgumentBuilder<FabricClientCommandSource>,
@@ -151,7 +156,7 @@ object MClientCommand {
                             .executes { ctx ->
                                 val transfers = StringArgumentType.getString(ctx, "transfers").split(" ").map { s ->
                                     val t = s.toIntOrNull()
-                                    if (t == null || SMetroInfo.getInstance().stations.all { it.id != t }) {
+                                    if (t == null || SMetroInfo.getInstance(dim).stations.all { it.id != t }) {
                                         ctx.source.sendError(Component.translatable("commands.metro.stations.error.unknown", t.toString()))
                                         return@executes -1
                                     }
@@ -227,7 +232,7 @@ object MClientCommand {
                             .executes { ctx ->
                                 val st = StringArgumentType.getString(ctx, "stations").split(" ").map { s ->
                                     val t = s.toIntOrNull()
-                                    if (t == null || SMetroInfo.getInstance().stations.all { it.id != t }) {
+                                    if (t == null || SMetroInfo.getInstance(dim).stations.all { it.id != t }) {
                                         ctx.source.sendError(Component.translatable("commands.metro.stations.error.unknown", t.toString()))
                                         return@executes -1
                                     }
@@ -251,12 +256,12 @@ object MClientCommand {
     }
 
     private fun addStation(pos: BlockPos, name: String): Int {
-        val info = SMetroInfo.getInstance()
+        val info = SMetroInfo.getInstance(dim)
         val stations = ArrayList(info.stations)
         if (stations.all { !it.pos.atY(100).closerThan(pos.atY(100), 3.0) && it.pos.y > 3 }) {
             val id = (stations.maxOfOrNull { it.id } ?: 0) + 1
             stations.add(MetroStation(id, pos, name, listOf(), MetroStation.Status.OPEN))
-            SMetroInfo.save(SMetroInfo(stations.toList(), info.lines))
+            SMetroInfo.save(dim, SMetroInfo(stations.toList(), info.lines))
             return id
         } else {
             return -1
@@ -264,7 +269,7 @@ object MClientCommand {
     }
 
     private fun removeStation(id: Int): Int {
-        val info = SMetroInfo.getInstance()
+        val info = SMetroInfo.getInstance(dim)
         val stations = info.stations.toMutableList()
         if (stations.removeIf { it.id == id }) {
             val lines = info.lines.map { l ->
@@ -277,7 +282,7 @@ object MClientCommand {
                 }
                 s
             }
-            SMetroInfo.save(SMetroInfo(st, lines))
+            SMetroInfo.save(dim, SMetroInfo(st, lines))
             return 1
         } else {
             return -1
@@ -285,19 +290,19 @@ object MClientCommand {
     }
 
     private fun updateStation(id: Int, updater: (MetroStation) -> MetroStation): Int {
-        val info = SMetroInfo.getInstance()
+        val info = SMetroInfo.getInstance(dim)
         val stations = info.stations.toMutableList()
         val i = stations.indexOfFirst { it.id == id }
         if (i == -1) return -1
         else {
             stations[i] = updater(stations[i])
-            SMetroInfo.save(SMetroInfo(stations.toList(), info.lines))
+            SMetroInfo.save(dim, SMetroInfo(stations.toList(), info.lines))
             return 1
         }
     }
 
     private fun setTransfers(id: Int, transfers: List<Int>): Int {
-        val info = SMetroInfo.getInstance()
+        val info = SMetroInfo.getInstance(dim)
         val stations = info.stations.toMutableList()
 
         fun update(uid: Int, updater: (MetroStation) -> MetroStation) {
@@ -332,23 +337,23 @@ object MClientCommand {
             it.transfers = transfers
             it
         }
-        SMetroInfo.save(SMetroInfo(stations.toList(), info.lines))
+        SMetroInfo.save(dim, SMetroInfo(stations.toList(), info.lines))
         return 1
     }
 
     private fun addOrUpdateLine(lineId: Int, updater: (MetroLine) -> MetroLine): Int {
-        val info = SMetroInfo.getInstance()
+        val info = SMetroInfo.getInstance(dim)
         val lines = info.lines.toMutableList()
         val i = lines.indexOfFirst { it.id == lineId }
         if (i == -1) {
             val name = Component.translatable("smetro.line.name.default.id", lineId).string
             val nl = MetroLine(lineId, name, 0xffffff, listOf())
             lines.add(updater(nl))
-            SMetroInfo.save(SMetroInfo(info.stations, lines.toList()))
+            SMetroInfo.save(dim, SMetroInfo(info.stations, lines.toList()))
             return 2
         } else {
             lines[i] = updater(lines[i])
-            SMetroInfo.save(SMetroInfo(info.stations, lines.toList()))
+            SMetroInfo.save(dim, SMetroInfo(info.stations, lines.toList()))
             return 1
         }
     }

@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import xaero.map.MapProcessor;
 
 @Environment(EnvType.CLIENT)
 @Mixin(targets = {"xaero.map.gui.GuiMap"})
@@ -28,6 +29,9 @@ public class GuiMapMixin {
     @Shadow
     private double screenScale;
 
+    @Shadow
+    private MapProcessor mapProcessor;
+
     @Inject(method = "extractRenderState", at = @At(value = "INVOKE", target = "Lxaero/map/graphics/ImprovedFramebuffer;bindDefaultFramebuffer(Lnet/minecraft/client/Minecraft;)V", shift = At.Shift.AFTER))
     private void renderMetroScheme(GuiGraphicsExtractor guiGraphics, int scaledMouseX, int scaledMouseY, float delta, CallbackInfo ci) {
         XaeroMapSchemeRenderer.extractRenderState$com_bleudev_simplemetro(
@@ -37,7 +41,8 @@ public class GuiMapMixin {
             this.cameraX,
             this.cameraZ,
             this.scale <= 0f ? this.userScale : this.scale,
-            this.screenScale
+            this.screenScale,
+            this.mapProcessor.getMapWorld().getCurrentDimension().getDimId().identifier()
         );
     }
 }

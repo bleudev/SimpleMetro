@@ -5,11 +5,17 @@ import com.mojang.math.Axis
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.gui.Font
+import net.minecraft.client.multiplayer.ClientLevel
+import net.minecraft.resources.Identifier
 import net.minecraft.world.phys.Vec3
 import xaero.hud.minimap.element.render.MinimapElementGraphics
 
 @Environment(EnvType.CLIENT)
 internal object XaeroMinimapSchemeRenderer : XaeroCommonSchemeRenderer() {
+    private var dim: Identifier? = null
+    override val currentDimension: Identifier
+        get() = dim ?: ClientLevel.OVERWORLD.identifier()
+
     private var zoom: Double = 1.0
 
     @JvmStatic
@@ -22,8 +28,10 @@ internal object XaeroMinimapSchemeRenderer : XaeroCommonSchemeRenderer() {
         minimapScale: Float,
         backgroundCoordinateScale: Double,
         playerCoordinateScale: Double,
+        dimension: Identifier,
     ) {
         this.zoom = zoom
+        this.dim = dimension
         val coordinateMultiplier = if (backgroundCoordinateScale == 0.0) 1.0 else playerCoordinateScale / backgroundCoordinateScale
         extractRenderState(object : MinimapGraphicsExtractor(graphics) {
             override fun mapScale(): Float = minimapScale

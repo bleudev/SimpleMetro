@@ -6,11 +6,13 @@ import com.bleudev.simplemetro.custom.network.protocol.common.custom.i.IPacketCo
 import net.minecraft.network.RegistryFriendlyByteBuf
 import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
+import net.minecraft.resources.Identifier
 
-class ServerboundMetroInfoEdit(val info: SMetroInfo) : CustomPacketPayload {
+class ServerboundMetroInfoEdit(val dimension: Identifier, val info: SMetroInfo) : CustomPacketPayload {
     companion object : IPacketCompanion<ServerboundMetroInfoEdit> {
         override val id = SMetro.resolve("packet/serverbound/edit/metro_info")
         override val codec: StreamCodec<RegistryFriendlyByteBuf, ServerboundMetroInfoEdit> = StreamCodec.composite(
+            Identifier.STREAM_CODEC, ServerboundMetroInfoEdit::dimension,
             SMetroInfo.STREAM_CODEC, ServerboundMetroInfoEdit::info,
             ::ServerboundMetroInfoEdit
         )

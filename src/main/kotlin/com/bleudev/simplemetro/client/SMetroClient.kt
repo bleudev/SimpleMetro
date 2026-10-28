@@ -1,5 +1,6 @@
 package com.bleudev.simplemetro.client
 
+import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
@@ -11,21 +12,33 @@ import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
+import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
+import net.minecraft.world.level.storage.LevelResource
 
 @Environment(EnvType.CLIENT)
 class SMetroClient : ClientModInitializer {
     override fun onInitializeClient() {
         SMetroPacketPayloads.initializeClient()
 
-        ClientPlayConnectionEvents.JOIN.register { _, _, _ -> MetroSchemeExtractor.rebuild(SMetroInfo.getInstance()) }
+        ClientPlayConnectionEvents.JOIN.register { l, _, mc ->
+            val sd = l.serverData
+            val sp = mc.singleplayerServer
+            if (sp != null) {
+                SMetroInfo.clientInit(sp.getWorldPath(LevelResource(SMetro.ID)))
+            }
+            else if (sd != null) {
+                SMetroInfo.clientInit(FabricLoader.getInstance().configDir.resolve(SMetro.ID, sd.ip))
+            }
+            MetroSchemeExtractor.rebuild(SMetroInfo.getInstances())
+        }
 
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, context ->
             MClientCommand.register(dispatcher, context)
         }
 
         listen(ClientboundMetroInfoSync) {
-            SMetroInfo.endSync(it.info)
+            SMetroInfo.endSync(it.dimensionMap)
         }
     }
 

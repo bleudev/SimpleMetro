@@ -7,6 +7,7 @@ import com.bleudev.simplemetro.custom.network.protocol.common.custom.Serverbound
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.i.IPacketCompanion
 import com.bleudev.simplemetro.util.sendPacket
 import net.fabricmc.api.DedicatedServerModInitializer
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
@@ -16,15 +17,19 @@ class SMetroServer : DedicatedServerModInitializer {
     override fun onInitializeServer() {
         SMetroPacketPayloads.initializeServer()
 
+        ServerLifecycleEvents.SERVER_STARTED.register { server ->
+            SMetroInfo.serverInit(server)
+        }
+
         ServerTickEvents.END_SERVER_TICK.register { server ->
             // Syncing
-            val p = ClientboundMetroInfoSync(SMetroInfo.getInstance())
+            val p = ClientboundMetroInfoSync(SMetroInfo.getInstances())
             for (player in server.playerList.players) player.sendPacket(p)
         }
 
         listen(ServerboundMetroInfoEdit) { payload, ctx ->
             if (ctx.player().permissions().hasPermission(Permissions.COMMANDS_ADMIN)) {
-                SMetroInfo.save(payload.info)
+                SMetroInfo.save(payload.dimension, payload.info)
             }
         }
     }

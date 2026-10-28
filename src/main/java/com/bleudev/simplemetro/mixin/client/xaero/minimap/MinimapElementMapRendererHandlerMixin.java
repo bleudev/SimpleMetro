@@ -48,7 +48,8 @@ public abstract class MinimapElementMapRendererHandlerMixin extends MinimapEleme
             this.zoom,
             GuiUtils.getMinimapScale(HudMod.INSTANCE.getHudConfigs().getClientConfigManager()),
             backgroundCoordinateScale,
-            level.dimensionType().coordinateScale()
+            level.dimensionType().coordinateScale(),
+            mapDimension.identifier()
         );
     }
 }

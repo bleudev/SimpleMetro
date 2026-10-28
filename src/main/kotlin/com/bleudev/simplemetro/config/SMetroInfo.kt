@@ -16,66 +16,95 @@ import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.network.RegistryFriendlyByteBuf
 import net.minecraft.network.codec.ByteBufCodecs
 import net.minecraft.network.codec.StreamCodec
+import net.minecraft.resources.Identifier
+import net.minecraft.server.MinecraftServer
+import net.minecraft.world.level.storage.LevelResource
 import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.name
 
 @Serializable
 data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: List<MetroLine> = listOf()) {
     companion object {
         private val JSON = Json { encodeDefaults = true; ignoreUnknownKeys = true; isLenient = true; prettyPrint = true }
-        private val path get() = FabricLoader.getInstance().configDir.resolve(SMetro.MOD_ID).resolve("scheme.info.json")
+
+        private var basePath: Path = FabricLoader.getInstance().configDir.resolve(SMetro.ID)
+        private fun pathOf(dimension: Identifier): Path = basePath.resolve(dimension.namespace).resolve("${dimension.path}.json")
 
         private var instance: SMetroInfo? = null
         private var instanceRaw: String? = null
-        private var syncedInstance: SMetroInfo? = null
+        private var syncedDimensionMap: Map<Identifier, SMetroInfo> = mapOf()
 
-        private fun load(s: String): SMetroInfo {
+        private fun load(dim: Identifier, s: String): SMetroInfo {
             var s = s
-            if (!Files.exists(path)) {
-                Files.createDirectories(path.parent)
+            if (!Files.exists(pathOf(dim))) {
+                Files.createDirectories(pathOf(dim).parent)
                 s = Json.encodeToString(SMetroInfo())
-                Files.writeString(path, s)
+                Files.writeString(pathOf(dim), s)
             }
             return JSON.decodeFromString(s)
         }
 
-        private fun load(): SMetroInfo {
-            val raw = if (Files.exists(path)) Files.readString(path) else ""
+        private fun load(dim: Identifier): SMetroInfo {
+            val raw = if (Files.exists(pathOf(dim))) Files.readString(pathOf(dim)) else ""
             if (instance == null || instanceRaw == null || raw != instanceRaw) {
-                instance = load(raw)
+                instance = load(dim, raw)
                 instanceRaw = raw
-                if (isClientSide) MetroSchemeExtractor.rebuild(instance!!)
+                if (isClientSide) MetroSchemeExtractor.rebuild(dim, instance!!)
             }
             return instance!!
         }
 
-        private fun internalSave(info: SMetroInfo) {
-            if (!Files.exists(path)) {
-                Files.createDirectories(path.parent)
-            }
-            Files.writeString(path, JSON.encodeToString(info))
-            if (isClientSide) MetroSchemeExtractor.rebuild(info)
+        private fun collectDimensions(): List<Identifier> {
+            return Files.walk(basePath).filter {
+                val f = it.toFile()
+                return@filter f.isFile && f.extension == "json"
+            }.map { Identifier.fromNamespaceAndPath(it.parent.name, it.name) }.toList()
         }
 
-        fun getInstance(): SMetroInfo {
-            return if (isClientSide) {
-                if (idModOnServer) syncedInstance ?: SMetroInfo() else load()
+        private fun internalSave(dim: Identifier, info: SMetroInfo) {
+            if (!Files.exists(pathOf(dim))) {
+                Files.createDirectories(pathOf(dim).parent)
+            }
+            Files.writeString(pathOf(dim), JSON.encodeToString(info))
+            if (isClientSide) MetroSchemeExtractor.rebuild(dim, info)
+        }
+
+        fun getInstance(dimension: Identifier): SMetroInfo {
+            return if (isClientSide && idModOnServer) {
+                syncedDimensionMap[dimension] ?: SMetroInfo()
             } else {
-                load()
+                load(dimension)
             }
         }
 
-        fun save(info: SMetroInfo) {
-            if (isClientSide) {
-                if (idModOnServer) ClientPlayNetworking.send(ServerboundMetroInfoEdit(info)) else internalSave(info)
+        fun getInstances(): Map<Identifier, SMetroInfo> {
+            return if (isClientSide && idModOnServer) syncedDimensionMap
+            else collectDimensions().associateWith { load(it) }
+        }
+
+        fun save(dimension: Identifier, info: SMetroInfo) {
+            if (isClientSide && idModOnServer) {
+                ClientPlayNetworking.send(ServerboundMetroInfoEdit(dimension, info))
             } else {
-                internalSave(info)
+                internalSave(dimension, info)
             }
         }
 
         @Environment(EnvType.CLIENT)
-        fun endSync(inst: SMetroInfo) {
-            syncedInstance = inst
+        fun endSync(inst: Map<Identifier, SMetroInfo>) {
+            syncedDimensionMap = inst
             MetroSchemeExtractor.rebuild(inst)
+        }
+
+        fun serverInit(server: MinecraftServer) {
+            basePath = server.getWorldPath(LevelResource(SMetro.ID))
+        }
+
+        @Environment(EnvType.CLIENT)
+        fun clientInit(path: Path) {
+            basePath = path
+            Files.createDirectories(basePath)
         }
 
         val STREAM_CODEC: StreamCodec<RegistryFriendlyByteBuf, SMetroInfo> = StreamCodec.composite(

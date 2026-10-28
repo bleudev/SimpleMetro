@@ -11,14 +11,20 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTextTooltip
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner
+import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.TextColor
+import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
 import net.minecraft.util.FormattedCharSequence
 import java.lang.reflect.Modifier
 
 @Environment(EnvType.CLIENT)
 internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
+    private var dim: Identifier? = null
+    override val currentDimension: Identifier
+        get() = dim ?: ClientLevel.OVERWORLD.identifier()
+
     private var width: Int = 0
     private var height: Int = 0
     private var pixelScale: Float = 0f
@@ -31,11 +37,13 @@ internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
         cameraX: Double,
         cameraZ: Double,
         pixelScale: Double,
-        mapScreenScale: Double
+        mapScreenScale: Double,
+        dimension: Identifier,
     ) {
         this.width = extractor.guiWidth()
         this.height = extractor.guiHeight()
         this.pixelScale = pixelScale.toFloat()
+        this.dim = dimension
 
         if (pixelScale > 0) {
             val scale = pixelScale / mapScreenScale

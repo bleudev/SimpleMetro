@@ -10,10 +10,10 @@ class SMetro : ModInitializer {
     }
 
     companion object {
-        const val MOD_ID = "simplemetro"
+        const val ID = "simplemetro"
 
         fun resolve(path: String): Identifier {
-            return Identifier.fromNamespaceAndPath(MOD_ID, path)
+            return Identifier.fromNamespaceAndPath(ID, path)
         }
     }
 }
