@@ -35,6 +35,7 @@ class LineTableExtractor private constructor() {
         if (storage.currentStation != current) {
             storage.prevStation = storage.currentStation ?: storage.prevStation
             storage.currentStation = current
+            if (current != null && storage.prevStation == null) storage.prevStation = current
             computeNextStation(storage.prevStation, info, playerPos).let { (l, r) ->
                 storage.currentLine = l
                 storage.nextStation = r

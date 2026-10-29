@@ -1,6 +1,5 @@
-package com.bleudev.simplemetro.client.render
+package com.bleudev.simplemetro.client.storage
 
-import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import net.minecraft.resources.Identifier
 
 class PathSearcher {

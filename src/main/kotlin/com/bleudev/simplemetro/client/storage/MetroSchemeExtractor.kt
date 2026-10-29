@@ -1,6 +1,5 @@
 package com.bleudev.simplemetro.client.storage
 
-import com.bleudev.simplemetro.client.render.PathSearcher
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.config.obj.MetroLine
 import com.bleudev.simplemetro.config.obj.MetroStation
