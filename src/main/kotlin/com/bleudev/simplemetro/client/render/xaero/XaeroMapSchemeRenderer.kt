@@ -1,7 +1,7 @@
 package com.bleudev.simplemetro.client.render.xaero
 
-import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
 import com.bleudev.simplemetro.client.render.PathSearcher
+import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.obj.MetroStation
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment

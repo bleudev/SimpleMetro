@@ -1,7 +1,7 @@
 package com.bleudev.simplemetro.config
 
 import com.bleudev.simplemetro.SMetro
-import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
+import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.obj.MetroLine
 import com.bleudev.simplemetro.config.obj.MetroStation
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ServerboundMetroInfoEdit

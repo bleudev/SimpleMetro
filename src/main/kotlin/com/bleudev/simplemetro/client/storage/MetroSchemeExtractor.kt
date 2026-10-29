@@ -1,5 +1,6 @@
-package com.bleudev.simplemetro.client.render
+package com.bleudev.simplemetro.client.storage
 
+import com.bleudev.simplemetro.client.render.PathSearcher
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.config.obj.MetroLine
 import com.bleudev.simplemetro.config.obj.MetroStation
@@ -13,7 +14,7 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 @Environment(EnvType.CLIENT)
-internal class MetroSchemeExtractor {
+internal class MetroSchemeExtractor private constructor() {
     private var renderState: HashMap<Identifier, SchemeRenderState> = hashMapOf()
     private var pathRenderState: HashMap<Identifier, SchemeRenderState> = hashMapOf()
     private var adjacencyMatrices: HashMap<Identifier, AdjacencyMatrix> = hashMapOf()
