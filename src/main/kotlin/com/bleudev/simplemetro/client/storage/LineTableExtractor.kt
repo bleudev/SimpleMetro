@@ -53,10 +53,17 @@ class LineTableExtractor private constructor() {
             storage.stationUpdated = true
         }
 
-        if (this.prevPos != null && this.nextPos != null && !isOnTrack(this.prevPos!!, this.nextPos!!, playerPos)) {
-            storage.currentLine = null
-            storage.prevStation = null
-            storage.nextStation = null
+        if (this.prevPos != null && this.nextPos != null) {
+            if (isOnTrack(this.prevPos!!, this.nextPos!!, playerPos)) {
+                storage.stationProgress = getLineProgress(Vec3.atCenterOf(this.prevPos!!), Vec3.atCenterOf(this.nextPos!!), playerPos).toFloat()
+            } else {
+                storage.currentLine = null
+                storage.prevStation = null
+                storage.nextStation = null
+                storage.stationProgress = null
+                this.prevPos = null
+                this.nextPos = null
+            }
         }
 
         if (storage.stationUpdated) {
@@ -107,8 +114,6 @@ class LineTableExtractor private constructor() {
                 }
             }
         }
-
-
 
         if (bests != null) {
             if (isOnTrack(station.pos, bests.pos, playerPos)) {

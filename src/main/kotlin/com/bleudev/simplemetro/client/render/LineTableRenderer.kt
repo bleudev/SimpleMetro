@@ -4,16 +4,15 @@ import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.SMetroInfo
+import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner
+import net.minecraft.client.gui.components.PlayerFaceExtractor
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
 import net.minecraft.world.level.Level
-import org.joml.Vector2i
-import org.joml.Vector2ic
 import kotlin.math.PI
 import kotlin.math.pow
 import kotlin.math.sin
@@ -45,14 +44,25 @@ internal object LineTableRenderer {
     fun rebuild(storage: MetroClientStorage, info: SMetroInfo) {
         val line = info.lines.firstOrNull { it.id == storage.currentLine }
         val station = storage.currentStation?.let { schemeRenderState.stations[it] }
-        if (line == null) {
+        if (line == null || storage.prevStation == null) {
             tableRenderState = null
             return
         }
 
+        var stations = line.stations
+        var i = stations.indexOf(storage.prevStation!!)
+        val j = storage.nextStation?.let { stations.indexOf(it) }
+        if (j != null && j < i) {
+            stations = stations.reversed()
+            i = stations.size-1-i
+        }
+        stations = stations.drop(i)
+
         tableRenderState = TableRenderState(
             MetroSchemeExtractor.StationLineRenderState(line.id, line.name, line.color),
             station,
+            stations.mapNotNull { schemeRenderState.stations[it] },
+            storage.stationProgress,
         )
     }
 
@@ -100,32 +110,55 @@ internal object LineTableRenderer {
             extractor.pose().pushMatrix()
             extractor.pose().translate(w.toFloat() / 2, 14f + h.toFloat())
             extractor.pose().scale(.75f)
-            extractLine(extractor, state.line)
+            extractLine(extractor, state)
             extractor.pose().popMatrix()
+
+            if (state.stations.size > 1) {
+                extractor.pose().pushMatrix()
+                extractor.pose().translate(13f, 20f + h.toFloat())
+                extractStationInfo(extractor, state.stations[1])
+                extractor.pose().popMatrix()
+            }
         }
     }
 
-    private fun extractLine(extractor: GuiGraphicsExtractor, line: MetroSchemeExtractor.StationLineRenderState) {
-        val col = ARGB.opaque(line.color)
+    private fun extractLine(extractor: GuiGraphicsExtractor, state: TableRenderState) {
+        val col = ARGB.opaque(state.line.color)
         val w = TOOLTIP_WIDTH
         extractor.fill(-w / 2, -1, w / 2, 1, col)
-    }
 
-    data class TableRenderState(
-        val line: MetroSchemeExtractor.StationLineRenderState,
-        val current: MetroSchemeExtractor.StationRenderState?
-    )
-
-    private object LineTableTooltipPositioner : ClientTooltipPositioner {
-        override fun positionTooltip(
-            screenWidth: Int,
-            screenHeight: Int,
-            x: Int,
-            y: Int,
-            tooltipWidth: Int,
-            tooltipHeight: Int
-        ): Vector2ic {
-            return Vector2i(-tooltipWidth / 2, 0)
+        state.progress?.also { progress ->
+            val x = -w.toFloat() / 2 + (progress * (w - 12*(state.stations.size-2)))
+            extractor.pose().pushMatrix()
+            extractor.pose().translate(x, 0f)
+            Minecraft.getInstance().player?.also { player ->
+                PlayerFaceExtractor.extractRenderState(extractor, player.skin, -4, -4, 8)
+            }
+            extractor.pose().popMatrix()
         }
+
+        extractor.fill(-w / 2 - 4, -4, -w / 2 + 4, 4, col)
+        for (i in 0..state.stations.size-2) {
+            extractor.fill(w / 2 - 4 - 12*i, -4, w / 2 + 4 - 12*i, 4, col)
+        }
+
+        println("DEBUG ${state.progress} ${state.stations.map { it.id to it.name }}")
     }
+
+    private fun extractStationInfo(extractor: GuiGraphicsExtractor, station: MetroSchemeExtractor.StationRenderState) {
+        val font = Minecraft.getInstance().font
+        extractor.pose().pushMatrix()
+        extractor.pose().scale(.5f)
+        extractor.text(font, Component.literal("Next station").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC), 0, 0, 0xffffffff.toInt())
+        extractor.pose().popMatrix()
+
+        extractor.text(font, Component.literal(station.name), 0, 7, 0xffffffff.toInt())
+    }
+
+    private data class TableRenderState(
+        val line: MetroSchemeExtractor.StationLineRenderState,
+        val current: MetroSchemeExtractor.StationRenderState?,
+        val stations: List<MetroSchemeExtractor.StationRenderState>,
+        val progress: Float?,
+    )
 }

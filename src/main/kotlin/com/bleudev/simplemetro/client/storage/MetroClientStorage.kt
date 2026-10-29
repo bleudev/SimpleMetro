@@ -12,6 +12,7 @@ class MetroClientStorage private constructor() {
     var nextStation: Int? = null
     var currentLine: Int? = null
     var stationUpdated: Boolean = false
+    var stationProgress: Float? = null
 
     fun onPlayerTick(player: LocalPlayer, level: ClientLevel) {
         LineTableExtractor.getInstance().playerTick(this, player, level)
