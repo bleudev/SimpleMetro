@@ -1,6 +1,7 @@
 package com.bleudev.simplemetro.client.render.xaero
 
 import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
+import com.bleudev.simplemetro.client.render.PathSearcher
 import com.bleudev.simplemetro.config.obj.MetroStation
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
@@ -11,6 +12,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTextTooltip
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner
+import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.TextColor
@@ -28,6 +30,7 @@ internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
     private var width: Int = 0
     private var height: Int = 0
     private var pixelScale: Float = 0f
+    private var hoveredStationId: Int? = null
 
     @JvmStatic
     internal fun extractRenderState(
@@ -57,16 +60,27 @@ internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
                     return DrawPosition(x.toFloat(), y.toFloat())
                 }
             }
-            extractRenderState(adapter)?.let { hovered ->
-                drawStationTooltip(extractor, renderState.stations[hovered]!!, scaledMouseX.toFloat(), scaledMouseY.toFloat())
+            this.hoveredStationId = extractRenderState(adapter)
+            this.hoveredStationId?.let { id ->
+                drawStationTooltip(extractor, renderState.stations[id]!!, scaledMouseX.toFloat(), scaledMouseY.toFloat())
             }
         }
     }
 
-    override fun drawStation(extractor: CommonGraphicsExtractor, station: MetroSchemeExtractor.StationRenderState) {
+    @JvmStatic
+    internal fun mouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean {
+        if (this.hoveredStationId != null && event.buttonInfo.button == 1 && !doubleClick) {
+            PathSearcher.getInstance().select(this.currentDimension, this.hoveredStationId!!)
+            return true
+        } else {
+            return false
+        }
+    }
+
+    override fun drawStation(extractor: CommonGraphicsExtractor, station: MetroSchemeExtractor.StationRenderState, selected: Boolean) {
         val drawPos = extractor.drawPos(station.pos)
         if (!(drawPos.x < -10.0) && !(drawPos.y < -10.0) && !(drawPos.x > (width + 10)) && !(drawPos.y > (height + 10))) {
-            super.drawStation(extractor, station)
+            super.drawStation(extractor, station, selected)
         }
     }
 

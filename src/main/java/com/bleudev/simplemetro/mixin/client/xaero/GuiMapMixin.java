@@ -1,9 +1,12 @@
 package com.bleudev.simplemetro.mixin.client.xaero;
 
 import com.bleudev.simplemetro.client.render.xaero.XaeroMapSchemeRenderer;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -44,5 +47,15 @@ public class GuiMapMixin {
             this.screenScale,
             this.mapProcessor.getMapWorld().getCurrentDimension().getDimId().identifier()
         );
+    }
+
+    @WrapMethod(method = "mouseClicked")
+    private boolean customMouseClick(MouseButtonEvent event, boolean doubleClick, Operation<Boolean> original) {
+        boolean var1 = original.call(event, doubleClick);
+        if (!var1) {
+            return XaeroMapSchemeRenderer.mouseClicked$com_bleudev_simplemetro(event, doubleClick);
+        } else {
+            return true;
+        }
     }
 }
