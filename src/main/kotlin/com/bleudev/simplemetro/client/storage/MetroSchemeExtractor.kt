@@ -17,6 +17,7 @@ internal class MetroSchemeExtractor private constructor() {
     private var renderState: HashMap<Identifier, SchemeRenderState> = hashMapOf()
     private var pathRenderState: HashMap<Identifier, SchemeRenderState> = hashMapOf()
     private var adjacencyMatrices: HashMap<Identifier, AdjacencyMatrix> = hashMapOf()
+    private val revisions: HashMap<Identifier, Int> = hashMapOf()
 
     private fun rebuild(dimMap: Map<Identifier, SMetroInfo>) {
         renderState.clear()
@@ -94,6 +95,7 @@ internal class MetroSchemeExtractor private constructor() {
             }
         }
         adjacencyMatrices[dim] = matrix
+        revisions[dim] = (revisions[dim] ?: 0) + 1
         PathSearcher.getInstance().rebuild(dim)
     }
 
@@ -142,6 +144,9 @@ internal class MetroSchemeExtractor private constructor() {
         }
         return adjacencyMatrices[dim]!!
     }
+
+    /** Changes whenever a dimension's station/line render data is rebuilt. */
+    fun getRevision(dim: Identifier): Int = revisions[dim] ?: 0
 
     companion object {
         private const val SELECT_COLOR = 0xffffff00.toInt()

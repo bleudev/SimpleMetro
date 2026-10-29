@@ -7,7 +7,6 @@ import net.fabricmc.api.Environment
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.player.LocalPlayer
 import net.minecraft.core.BlockPos
-import net.minecraft.network.chat.Component
 import net.minecraft.world.phys.Vec3
 import kotlin.math.abs
 
@@ -19,38 +18,60 @@ class LineTableExtractor private constructor() {
     fun playerTick(storage: MetroClientStorage, player: LocalPlayer, level: ClientLevel) {
         val playerPos = player.position()
         val info = SMetroInfo.getInstance(level.dimension().identifier())
-        var current: Int? = null
-        var currentName: String? = null
+        val stationsById = info.stations.associateBy { it.id }
 
-        for ((id, pos1, name) in info.stations) {
+        var current: Int? = null
+        var closestStationDistance = Double.POSITIVE_INFINITY
+
+        for ((id, pos1, _, _, status) in info.stations) {
+//            if (status.invisible) continue
             val pos = Vec3.atCenterOf(pos1)
             val d = pos.horizontal().distanceTo(playerPos.horizontal())
-            val dy = abs(pos.y-playerPos.y)
-            if (d <= STATION_CHECK_RADIUS && dy <= STATION_CHECK_HEIGHT) {
+            val dy = abs(pos.y - playerPos.y)
+            if (d <= STATION_CHECK_RADIUS && dy <= STATION_CHECK_HEIGHT && d < closestStationDistance) {
                 current = id
-                currentName = name
-                break
+                closestStationDistance = d
             }
         }
         if (storage.currentStation != current) {
-            storage.prevStation = storage.currentStation ?: storage.prevStation
-            storage.currentStation = current
-            if (current != null && storage.prevStation == null) storage.prevStation = current
-            computeNextStation(storage.prevStation, info, playerPos).let { (l, r) ->
-                storage.currentLine = l
-                storage.nextStation = r
-            }
-            if (storage.currentStation == null && storage.currentLine != null && storage.prevStation != null && storage.nextStation != null) {
-                for ((id, pos) in info.stations) {
-                    if (id == storage.prevStation) {
-                        this.prevPos = pos
-                    }
-                    if (id == storage.nextStation) {
-                        this.nextPos = pos
+            val previousCurrent = storage.currentStation
+
+            if (previousCurrent != null) {
+                stationsById[previousCurrent]?.let { station ->
+                    if (!station.status.invisible) {
+                        storage.publishStationEvent(
+                            MetroClientStorage.StationEventType.DEPARTURE,
+                            station.id,
+                            station.name,
+                        )
                     }
                 }
             }
-            storage.stationUpdated = true
+            if (current != null) {
+                stationsById[current]?.let { station ->
+                    if (!station.status.invisible) {
+                        storage.publishStationEvent(
+                            MetroClientStorage.StationEventType.ARRIVAL,
+                            station.id,
+                            station.name,
+                        )
+                    }
+                }
+            }
+
+            storage.prevStation = previousCurrent ?: storage.prevStation
+            storage.currentStation = current
+            if (current != null && storage.prevStation == null) storage.prevStation = current
+            computeNextStation(storage.prevStation, info, playerPos).let { (line, next) ->
+                storage.currentLine = line
+                storage.nextStation = next
+            }
+            if (storage.currentStation == null && storage.currentLine != null && storage.prevStation != null && storage.nextStation != null) {
+                for ((id, pos) in info.stations) {
+                    if (id == storage.prevStation) this.prevPos = pos
+                    if (id == storage.nextStation) this.nextPos = pos
+                }
+            }
         }
 
         if (this.prevPos != null && this.nextPos != null) {
@@ -66,23 +87,13 @@ class LineTableExtractor private constructor() {
             }
         }
 
-        if (storage.stationUpdated) {
-            if (storage.currentLine != null) {
-                if (storage.currentStation != null && currentName != null) {
-                    player.sendOverlayMessage(Component.literal("Station: $currentName"))
-                } else if (storage.nextStation != null) {
-                    val st = info.stations.first { it.id == storage.nextStation }
-                    player.sendOverlayMessage(Component.literal("Next station: ${st.name}"))
-                }
-            }
-            storage.stationUpdated = false
-        }
     }
 
     private fun computeNextStation(prev: Int?, info: SMetroInfo, playerPos: Vec3): Pair<Int?, Int?> {
         if (prev == null) return null to null
         val lines = info.lines.filter { prev in it.stations }
-        val station = info.stations.first { it.id == prev }
+        val allStations = info.stations.associateBy { it.id }
+        val station = allStations[prev] ?: return null to null
 
         var best: Pair<Int, Int>? = null
         var bestd: Double? = null
@@ -93,7 +104,7 @@ class LineTableExtractor private constructor() {
             // Check first
             if (i-1 >= 0) {
                 val f = stations[i-1]
-                val fs = info.stations.first { it.id == f }
+                val fs = allStations[f] ?: continue
                 val fd = playerPos.distanceToSqr(Vec3.atCenterOf(fs.pos))
                 if (best == null || bestd == null || bestd > fd) {
                     best = id to f
@@ -105,7 +116,7 @@ class LineTableExtractor private constructor() {
             // Check second
             if (i+1 < stations.size) {
                 val s = stations[i+1]
-                val ss = info.stations.first { it.id == s }
+                val ss = allStations[s] ?: continue
                 val sd = playerPos.distanceToSqr(Vec3.atCenterOf(ss.pos))
                 if (best == null || bestd == null || bestd > sd) {
                     best = id to s
