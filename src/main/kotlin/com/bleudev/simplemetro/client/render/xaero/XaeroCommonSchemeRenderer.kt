@@ -12,6 +12,7 @@ import kotlin.math.*
 internal abstract class XaeroCommonSchemeRenderer {
     abstract val currentDimension: Identifier
     protected val renderState: MetroSchemeExtractor.SchemeRenderState get() = MetroSchemeExtractor.getInstance().extractRenderState(currentDimension)
+    protected val pathRenderState: MetroSchemeExtractor.SchemeRenderState get() = MetroSchemeExtractor.getInstance().extractPathRenderState(currentDimension)
 
     protected fun extractRenderState(extractor: CommonGraphicsExtractor): Int? {
         for (connection in renderState.connections) {
@@ -19,10 +20,17 @@ internal abstract class XaeroCommonSchemeRenderer {
         }
         var hovered: Int? = null
         for (station in renderState.stations.values) {
-            drawStation(extractor, station)
+            drawStation(extractor, station, false)
             if (extractor.mousePos().distanceSqr(extractor.drawPos(station.pos)) <= 25) {
                 hovered = station.id
             }
+        }
+        // Path
+        for (connection in pathRenderState.connections) {
+            drawConnection(extractor, connection)
+        }
+        for (station in pathRenderState.stations.values) {
+            drawStation(extractor, station, true)
         }
         return hovered
     }
@@ -57,7 +65,7 @@ internal abstract class XaeroCommonSchemeRenderer {
         extractor.popPose()
     }
 
-    protected open fun drawStation(extractor: CommonGraphicsExtractor, station: MetroSchemeExtractor.StationRenderState) {
+    protected open fun drawStation(extractor: CommonGraphicsExtractor, station: MetroSchemeExtractor.StationRenderState, selected: Boolean) {
         if (station.status.invisible) return
 
         val colors = station.schemeColors
@@ -81,7 +89,7 @@ internal abstract class XaeroCommonSchemeRenderer {
             extractor.fill(-4, -4, 4, 4, station.grayColor)
         }
 
-        drawStationText(extractor, station, 1f)
+        if (!selected) drawStationText(extractor, station, 1f)
         extractor.popPose()
     }
 

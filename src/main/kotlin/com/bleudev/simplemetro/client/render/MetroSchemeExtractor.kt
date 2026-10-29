@@ -15,6 +15,7 @@ import kotlin.math.sqrt
 @Environment(EnvType.CLIENT)
 internal class MetroSchemeExtractor {
     private var renderState: HashMap<Identifier, SchemeRenderState> = hashMapOf()
+    private var pathRenderState: HashMap<Identifier, SchemeRenderState> = hashMapOf()
     private var adjacencyMatrices: HashMap<Identifier, AdjacencyMatrix> = hashMapOf()
 
     private fun rebuild(dimMap: Map<Identifier, SMetroInfo>) {
@@ -96,11 +97,44 @@ internal class MetroSchemeExtractor {
         PathSearcher.getInstance().rebuild(dim)
     }
 
+    private fun rebuildPathSearch(dim: Identifier, from: Int?, to: Int?, path: List<Int>?) {
+        val state = renderState[dim] ?: return
+
+        val stations = hashMapOf<Int, StationRenderState>()
+        val connections = arrayListOf<ConnectionRenderState>()
+
+        fun selectedStation(id: Int) {
+            val st = state.stations[id]
+            if (st != null) {
+                val col = if (from != null && to != null && path == null) SELECT_FAIL_COLOR else SELECT_COLOR
+                stations[id] = StationRenderState(id, st.pos, "", listOf(StationLineRenderState(-1, "", col)), listOf(), MetroStation.Status.OPEN)
+            }
+        }
+
+        if (from != null) selectedStation(from)
+        if (to != null) selectedStation(to)
+        if (path != null) {
+            for ((i, j) in path.zipWithNext()) {
+                val si = state.stations[i]
+                val sj = state.stations[j]
+                if (si != null && sj != null) {
+                    connections.add(ConnectionRenderState(si.pos, sj.pos, SELECT_COLOR))
+                }
+                if (sj != null && j != from && j != to) selectedStation(j)
+            }
+        }
+
+        pathRenderState[dim] = SchemeRenderState(stations, connections)
+    }
+
     fun extractRenderState(dim: Identifier): SchemeRenderState {
         if (renderState[dim] == null) {
             rebuild(dim, SMetroInfo.getInstance(dim))
         }
         return renderState[dim]!!
+    }
+    fun extractPathRenderState(dim: Identifier): SchemeRenderState {
+        return pathRenderState[dim] ?: SchemeRenderState(mapOf(), listOf())
     }
     fun extractAdjacencyMatrix(dim: Identifier): AdjacencyMatrix {
         if (adjacencyMatrices[dim] == null) {
@@ -110,6 +144,9 @@ internal class MetroSchemeExtractor {
     }
 
     companion object {
+        private const val SELECT_COLOR = 0xffffff00.toInt()
+        private const val SELECT_FAIL_COLOR = 0xffff0000.toInt()
+
         private var instance: MetroSchemeExtractor? = MetroSchemeExtractor()
         fun getInstance(): MetroSchemeExtractor {
             if (instance == null) {
@@ -119,9 +156,14 @@ internal class MetroSchemeExtractor {
         }
         fun rebuild(dimensionMap: Map<Identifier, SMetroInfo>) {
             getInstance().rebuild(dimensionMap)
+            getInstance().pathRenderState.clear()
         }
         fun rebuild(dimension: Identifier, info: SMetroInfo) {
             getInstance().rebuild(dimension, info)
+            getInstance().pathRenderState.remove(dimension)
+        }
+        fun rebuildPathSearch(dimension: Identifier, from: Int?, to: Int?, path: List<Int>?) {
+            getInstance().rebuildPathSearch(dimension, from, to, path)
         }
     }
 
@@ -170,12 +212,7 @@ internal class MetroSchemeExtractor {
         private fun buildArray(size: Int): Array<Array<Double?>> {
             return Array(size) { Array(size) { null } }
         }
-        
-        fun resize(size: Int) {
-            this.array = buildArray(size)
-            this.size = size
-        }
-        
+
         operator fun get(i: Int, j: Int): Double? {
             return this.array[i-1][j-1]
         }
@@ -196,6 +233,6 @@ internal class MetroSchemeExtractor {
             return this.array.toList().map { it.toList() }
         }
 
-        override fun toString(): String = this.array.contentDeepToString()
+        override fun toString(): String = this.toList().toString()
     }
 }
