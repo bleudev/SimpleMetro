@@ -179,8 +179,6 @@ internal object LinePanelRenderer {
         else detectedCurrentId ?: return null
         val currentState = scheme.stations[currentId]?.takeUnless { it.status.invisible } ?: return null
 
-        // Keep the line selected by the extractor. A station can belong to more than one line;
-        // picking the first line here would make the panel jump to an unrelated branch.
         val lineId = storage.currentLine?.takeIf { id -> info.lines.any { it.id == id } }
             ?: currentState.lines.firstOrNull()?.id
         val sourceLine = lineId?.let { id -> info.lines.firstOrNull { it.id == id } }
@@ -189,8 +187,6 @@ internal object LinePanelRenderer {
         val nextId = storage.nextVisibleStation
         val nextState = nextId?.let(scheme.stations::get)?.takeUnless { it.status.invisible }
 
-        // Invisible stations remain in the track geometry used by LineTableExtractor, but never
-        // become visual stops on this diagram.
         var routeIds = sourceLine?.stations.orEmpty().filter { id ->
             scheme.stations[id]?.status?.invisible != true
         }
@@ -302,10 +298,10 @@ internal object LinePanelRenderer {
 
 
         if (currentStatus != null && !state.travelling) {
-            extractor.text(font, Component.literal(currentStatus), col1, y + 36, color(0xFFFF8176.toInt(), textAlpha))
+            extractor.scrollingTextLineLeft(Component.literal(currentStatus).withColor(0xff8176), textAlpha, col1, y + 36, colWidth)
         }
         if (nextStatus != null) {
-            extractor.text(font, Component.literal(nextStatus), if (state.travelling) col1 else col2, y + 36, color(0xFFFFB36B.toInt(), textAlpha))
+            extractor.scrollingTextLineLeft(Component.literal(nextStatus).withColor(0xffb36b), textAlpha, if (state.travelling) col1 else col2, y + 36, if (state.travelling) colWidth * 2 else colWidth)
         }
 
         if (state.line != null) {
