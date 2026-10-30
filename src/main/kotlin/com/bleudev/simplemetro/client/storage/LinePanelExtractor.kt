@@ -12,8 +12,7 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 @Environment(EnvType.CLIENT)
-class LineTableExtractor private constructor() {
-    /** A directed track segment between two visible stations. All invisible waypoints are kept. */
+class LinePanelExtractor private constructor() {
     private data class TrackPath(
         val lineId: Int,
         val fromStationId: Int,
@@ -57,8 +56,6 @@ class LineTableExtractor private constructor() {
 
         val previousCurrent = storage.currentStation
 
-        // If a station on the active route becomes invisible after a live scheme edit, extend
-        // the same polyline through it instead of treating it as the next stop.
         activePath?.let { path ->
             if (stationsById[path.toStationId]?.status?.invisible == true) {
                 val replacement = chooseOutgoingPath(
@@ -76,7 +73,6 @@ class LineTableExtractor private constructor() {
         val current = detectVisibleStation(info.stations, stationsById, previousCurrent, playerPos)
 
         if (previousCurrent != current) {
-            // A direct transition is possible when the station detection radii overlap.
             if (previousCurrent != null) {
                 stationsById[previousCurrent]?.let { station ->
                     if (!station.status.invisible) {
@@ -103,12 +99,8 @@ class LineTableExtractor private constructor() {
             if (current == null && previousCurrent != null) {
                 val previousStation = stationsById[previousCurrent]
                 if (previousStation == null || previousStation.status.invisible) {
-                    // A live edit may turn the station under the player into an invisible
-                    // waypoint. Do not turn it into a logical origin or publish an event.
                     clearRoute(storage)
                 } else {
-                    // We have just left a visible station. Choose the outgoing track using the
-                    // player's actual movement direction, not distance to neighbouring stops.
                     storage.prevVisibleStation = previousCurrent
                     val selected = chooseOutgoingPath(
                         previousCurrent,
@@ -121,8 +113,6 @@ class LineTableExtractor private constructor() {
                     setActivePath(storage, selected)
                 }
             } else if (current != null) {
-                // If the active segment ends here, preserve its line and direction through
-                // multi-line stations. Invisible stations are simply intermediate geometry.
                 val arrivedPath = activePath?.takeIf { it.toStationId == current }
                     ?: storage.prevVisibleStation?.let { from ->
                         findPathBetween(from, current, info, playerPos, motion, storage.currentLine)
@@ -141,7 +131,7 @@ class LineTableExtractor private constructor() {
                 val selected = continuation ?: if (arrivedPath == null) {
                     chooseOutgoingPath(current, info, playerPos, motion, storage.currentLine, null)
                 } else {
-                    null // End of this line in the current direction.
+                    null
                 }
                 setActivePath(storage, selected, arrivedPath?.lineId)
             }
@@ -150,8 +140,6 @@ class LineTableExtractor private constructor() {
         }
 
         if (current != null) {
-            // Keep the station panel visible while stopped. As soon as the player starts moving
-            // away from the station, update the selected branch even before leaving its radius.
             if (storage.prevVisibleStation == null) {
                 storage.prevVisibleStation = current
                 setActivePath(storage, chooseOutgoingPath(current, info, playerPos, motion, storage.currentLine, null))
@@ -255,7 +243,6 @@ class LineTableExtractor private constructor() {
         return bestId
     }
 
-    /** Creates both directions from a visible station to the next visible station on each line. */
     private fun outgoingPaths(fromStationId: Int, info: SMetroInfo): List<TrackPath> {
         val stationsById = info.stations.associateBy { it.id }
         val paths = ArrayList<TrackPath>()
@@ -326,11 +313,6 @@ class LineTableExtractor private constructor() {
         )
     }
 
-    /**
-     * Selects a line by how well its actual track polyline matches the player's movement.
-     * This is important at stations shared by multiple lines: nearest destination coordinates
-     * alone cannot tell which branch the player is taking.
-     */
     private fun chooseBestPath(
         candidates: List<TrackPath>,
         playerPos: Vec3,
@@ -364,10 +346,6 @@ class LineTableExtractor private constructor() {
         }
     }
 
-    /**
-     * Switches to another line/direction only when its polyline fits the player's actual position
-     * clearly better. This lets parallel/shared track sections remain stable until they diverge.
-     */
     private fun selectBetterPath(
         storage: MetroClientStorage,
         fromStationId: Int,
@@ -494,10 +472,10 @@ class LineTableExtractor private constructor() {
         private const val PROJECTION_DIRECTION_TIE_WEIGHT = 0.0001
         private val ZERO = Vec3(0.0, 0.0, 0.0)
 
-        private var instance: LineTableExtractor? = null
-        fun getInstance(): LineTableExtractor {
+        private var instance: LinePanelExtractor? = null
+        fun getInstance(): LinePanelExtractor {
             if (instance == null) {
-                instance = LineTableExtractor()
+                instance = LinePanelExtractor()
             }
             return instance!!
         }

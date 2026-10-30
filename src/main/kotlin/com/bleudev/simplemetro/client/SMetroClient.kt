@@ -1,7 +1,7 @@
 package com.bleudev.simplemetro.client
 
 import com.bleudev.simplemetro.SMetro
-import com.bleudev.simplemetro.client.render.LineTableRenderer
+import com.bleudev.simplemetro.client.render.LinePanelRenderer
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.SMetroInfo
@@ -47,7 +47,7 @@ class SMetroClient : ClientModInitializer {
         }
 
         HudElementRegistry.addLast(SMetro.resolve("layer/table")) { e, _ ->
-            LineTableRenderer.extractRenderState(e)
+            LinePanelRenderer.extractRenderState(e)
         }
 
         ClientTickEvents.END_LEVEL_TICK.register { level ->

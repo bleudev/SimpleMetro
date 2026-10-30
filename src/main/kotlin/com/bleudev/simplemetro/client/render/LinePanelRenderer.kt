@@ -7,33 +7,35 @@ import com.bleudev.simplemetro.config.SMetroInfo
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.ActiveTextCollector
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.gui.TextAlignment
 import net.minecraft.client.gui.components.PlayerFaceExtractor
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
+import net.minecraft.util.Mth
+import net.minecraft.util.Util
 import net.minecraft.world.level.Level
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
-/**
- * Compact, Moscow-metro-inspired route HUD.
- *
- * Only the route's static presentation is rebuilt when the dimension, line, station state or
- * scheme revision changes. Player progress and animation are sampled separately every frame.
- */
 @Environment(EnvType.CLIENT)
-internal object LineTableRenderer {
+internal object LinePanelRenderer {
+    private val BG_TEXTURE = SMetro.resolve("panel_bg")
+
     private const val PANEL_WIDTH = 176
     private const val PANEL_HEIGHT = 78
     private const val PANEL_MARGIN = 7
     private const val MAX_ROUTE_STATIONS = 6
 
     private const val PANEL_IN_DURATION_MS = 230f
-    private const val TITLE_DURATION_MS = 3_600L
-    private const val TITLE_FADE_IN_MS = 280L
-    private const val TITLE_FADE_OUT_MS = 650L
-    private const val TITLE_SCALE = 3.0f
+    private const val PANEL_MODE_TRANSITION_MS = 260L
+    private const val ARRIVAL_NOTIFICATION_DURATION_MS = 3_600L
+    private const val ARRIVAL_FADE_IN_MS = 280L
+    private const val ARRIVAL_FADE_OUT_MS = 650L
 
     private const val COLOR_BACKGROUND = 0x101820
     private const val COLOR_MUTED = 0x9BACB8
@@ -71,6 +73,13 @@ internal object LineTableRenderer {
     private data class ActiveToast(
         val event: MetroClientStorage.StationEvent,
         val startedAtMs: Long,
+        var fadeOutStartedAtMs: Long? = null,
+    )
+
+    private data class PanelTransition(
+        val from: TableRenderState,
+        val to: TableRenderState,
+        val startedAtMs: Long,
     )
 
     private var cachedKey: CacheKey? = null
@@ -78,6 +87,7 @@ internal object LineTableRenderer {
     private var panelVisibility = 0f
     private var lastFrameNanos = 0L
     private var activeToast: ActiveToast? = null
+    private var panelTransition: PanelTransition? = null
 
     fun extractRenderState(extractor: GuiGraphicsExtractor) {
         val mc = Minecraft.getInstance()
@@ -95,8 +105,19 @@ internal object LineTableRenderer {
             storage.currentStation,
             storage.nextVisibleStation,
         )
+        val nowMs = System.currentTimeMillis()
+        val departureEvent = updateToast(storage, nowMs)
         if (key != cachedKey) {
-            tableRenderState = buildTableState(storage, SMetroInfo.getInstance(dim), scheme)
+            val previousState = tableRenderState
+            val nextState = buildTableState(storage, SMetroInfo.getInstance(dim), scheme)
+            panelTransition = if (
+                departureEvent && activeToast == null && previousState != null && nextState != null
+            ) {
+                PanelTransition(previousState, nextState, nowMs)
+            } else {
+                null
+            }
+            tableRenderState = nextState
             cachedKey = key
         }
 
@@ -108,24 +129,38 @@ internal object LineTableRenderer {
         val shouldShowPanel = mc.player != null && mc.level != null && tableRenderState != null
         panelVisibility = approach(panelVisibility, if (shouldShowPanel) 1f else 0f, deltaMs / PANEL_IN_DURATION_MS)
 
-        updateToast(storage, System.currentTimeMillis())
+        val toast = activeToast
+        val toastAlpha = toast?.let { getToastAlpha(it, nowMs) } ?: 0f
 
         if (panelVisibility > 0.001f && tableRenderState != null) {
             val alpha = easeOutCubic(panelVisibility)
             val x = (extractor.guiWidth() - PANEL_WIDTH - PANEL_MARGIN).coerceAtLeast(4)
             val y = PANEL_MARGIN
             val slide = ((1f - alpha) * (PANEL_WIDTH + 12)).roundToInt()
-            drawPanel(extractor, x + slide, y, tableRenderState!!, storage.stationProgress, alpha)
-        }
-
-        activeToast?.let { toast ->
-            val now = System.currentTimeMillis()
-            val age = (now - toast.startedAtMs).coerceAtLeast(0L)
-            if (age < TITLE_DURATION_MS) {
-                val fadeIn = (age.toFloat() / TITLE_FADE_IN_MS).coerceIn(0f, 1f)
-                val fadeOut = ((TITLE_DURATION_MS - age).toFloat() / TITLE_FADE_OUT_MS).coerceIn(0f, 1f)
-                val alpha = minOf(fadeIn, fadeOut)
-                drawFullscreenNotification(extractor, toast.event, age, alpha)
+            if (panelTransition != null && toastAlpha <= 0.001f) {
+                val progress = ((nowMs - panelTransition!!.startedAtMs).toFloat() / PANEL_MODE_TRANSITION_MS)
+                    .coerceIn(0f, 1f)
+                if (progress >= 1f) {
+                    panelTransition = null
+                    drawPanel(extractor, x + slide, y, tableRenderState!!, storage.stationProgress, alpha, alpha)
+                } else {
+                    drawPanel(extractor, x + slide, y, panelTransition!!.from, storage.stationProgress, alpha, alpha * (1f - progress))
+                    drawPanel(extractor, x + slide, y, panelTransition!!.to, storage.stationProgress, alpha, alpha * progress)
+                }
+            } else {
+                panelTransition = null
+                drawPanel(
+                    extractor,
+                    x + slide,
+                    y,
+                    tableRenderState!!,
+                    storage.stationProgress,
+                    alpha,
+                    alpha * (1f - toastAlpha),
+                )
+                toast?.let { active ->
+                    drawArrivalNotificationPanel(extractor, x + slide, y, active.event, alpha * toastAlpha)
+                }
             }
         }
     }
@@ -219,15 +254,16 @@ internal object LineTableRenderer {
         state: TableRenderState,
         progress: Float?,
         alpha: Float,
+        textAlpha: Float,
     ) {
         val accent = state.line?.color ?: COLOR_MUTED
 
-        extractor.blitSprite(RenderPipelines.GUI_TEXTURED, SMetro.resolve("table_background"), x - 10, y - 10, PANEL_WIDTH + 15, PANEL_HEIGHT + 20)
-        fill(extractor, x + 1, y + 1, x + 4, y + PANEL_HEIGHT - 1, accent, alpha)
+        extractor.blitSprite(RenderPipelines.GUI_TEXTURED, BG_TEXTURE, x - 10, y - 10, PANEL_WIDTH + 15, PANEL_HEIGHT + 20)
+        extractor.fill(x + 1, y + 1, x + 4, y + PANEL_HEIGHT - 1, color(accent, alpha))
 
         val font = Minecraft.getInstance().font
         val lineLabel = state.line?.name ?: Component.translatable("smetro.hud.no_line").string
-        extractor.textRenderer().acceptScrolling(Component.literal(lineLabel).withColor(color(COLOR_MUTED, alpha)), x + 9, x + 9, x + 9 + PANEL_WIDTH - 42, y + 4, y + 12)
+        extractor.scrollingTextLineLeft(Component.literal(lineLabel).withColor(COLOR_MUTED), alpha, x + 9, y + 4, PANEL_WIDTH - 42)
 
         val col1 = x + 9
         val col2 = x + (PANEL_WIDTH / 2) + 2
@@ -237,7 +273,7 @@ internal object LineTableRenderer {
             Component.translatable(if (state.travelling) "smetro.hud.next" else "smetro.hud.here"),
             col1,
             y + 17,
-            color(COLOR_MUTED, alpha),
+            color(COLOR_MUTED, textAlpha),
         )
         if (!state.travelling) {
             extractor.text(
@@ -245,7 +281,7 @@ internal object LineTableRenderer {
                 Component.translatable("smetro.hud.next_short"),
                 col2,
                 y + 17,
-                color(COLOR_MUTED, alpha),
+                color(COLOR_MUTED, textAlpha),
             )
         }
 
@@ -256,20 +292,20 @@ internal object LineTableRenderer {
 
         if (state.travelling) {
             val nextName = state.nextStation?.name ?: Component.translatable(if (state.line == null) "smetro.hud.no_next_station" else "smetro.hud.terminal").string
-            extractor.textRenderer().acceptScrolling(Component.literal(nextName).withColor(color(currentColor, alpha)), col1, col1, col1 + colWidth * 2, y + 26, y + 36)
+            extractor.scrollingTextLineLeft(Component.literal(nextName).withColor(currentColor), textAlpha, col1, y + 26, colWidth * 2)
         }
         else {
-            extractor.textRenderer().acceptScrolling(Component.literal(state.currentStation.name).withColor(color(currentColor, alpha)), col1, col1, col1 + colWidth, y + 26, y + 36)
+            extractor.scrollingTextLineLeft(Component.literal(state.currentStation.name).withColor(currentColor), textAlpha, col1, y + 26, colWidth)
             val nextName = state.nextStation?.name ?: Component.translatable(if (state.line == null) "smetro.hud.no_next_station" else "smetro.hud.terminal").string
-            extractor.textRenderer().acceptScrolling(Component.literal(nextName).withColor(color(nextColor, alpha)), col2, col2, col2 + colWidth, y + 26, y + 36)
+            extractor.scrollingTextLineLeft(Component.literal(nextName).withColor(nextColor), textAlpha, col2, y + 26, colWidth)
         }
 
 
         if (currentStatus != null && !state.travelling) {
-            extractor.text(font, Component.literal(currentStatus), col1, y + 36, color(0xFFFF8176.toInt(), alpha))
+            extractor.text(font, Component.literal(currentStatus), col1, y + 36, color(0xFFFF8176.toInt(), textAlpha))
         }
         if (nextStatus != null) {
-            extractor.text(font, Component.literal(nextStatus), if (state.travelling) col1 else col2, y + 36, color(0xFFFFB36B.toInt(), alpha))
+            extractor.text(font, Component.literal(nextStatus), if (state.travelling) col1 else col2, y + 36, color(0xFFFFB36B.toInt(), textAlpha))
         }
 
         if (state.line != null) {
@@ -278,6 +314,33 @@ internal object LineTableRenderer {
         if (state.transfers.isNotEmpty()) {
             drawTransfers(extractor, x + 9, y + 61, state.transfers, alpha)
         }
+    }
+
+    private fun drawArrivalNotificationPanel(
+        extractor: GuiGraphicsExtractor,
+        x: Int,
+        y: Int,
+        event: MetroClientStorage.StationEvent,
+        alpha: Float,
+    ) {
+        val font = Minecraft.getInstance().font
+        val columnX = x + 9
+        val columnWidth = PANEL_WIDTH - 24
+
+        extractor.text(
+            font,
+            Component.translatable("smetro.hud.station"),
+            columnX,
+            y + 17,
+            color(COLOR_MUTED, alpha),
+        )
+        extractor.scrollingTextLineLeft(
+            Component.literal(event.stationName).withColor(color(COLOR_TEXT, alpha)),
+            alpha,
+            columnX,
+            y + 26,
+            columnWidth
+        )
     }
 
     private fun drawRouteDiagram(
@@ -336,64 +399,80 @@ internal object LineTableRenderer {
             fill(extractor, bx, y, bx + badgeWidth, y + 10, COLOR_BADGE, alpha)
             fill(extractor, bx, y, bx + 2, y + 10, transfer.color, alpha)
             val label = if (transfers.size > 3 && i == shownCount - 1) "+${transfers.size - 2}" else transfer.name
-            extractor.textRenderer().acceptScrolling(Component.literal(label), bx + 5, bx + 5, bx + 5 + badgeWidth - 8, y + 1, y + 10)
+            extractor.scrollingTextLineLeft(Component.literal(label), alpha, bx + 5, y + 1, badgeWidth - 8)
         }
     }
 
-    private fun updateToast(storage: MetroClientStorage, nowMs: Long) {
-        val active = activeToast
-        if (active != null && nowMs - active.startedAtMs >= TITLE_DURATION_MS) {
-            activeToast = null
-        }
-        if (activeToast == null) {
-            storage.pollStationEvent()?.let { event ->
-                activeToast = ActiveToast(event, nowMs)
+    private fun updateToast(storage: MetroClientStorage, nowMs: Long): Boolean {
+        var departureEvent = false
+        while (true) {
+            val event = storage.pollStationEvent() ?: break
+            when (event.type) {
+                MetroClientStorage.StationEventType.ARRIVAL -> {
+                    activeToast = ActiveToast(event, nowMs)
+                }
+                MetroClientStorage.StationEventType.DEPARTURE -> {
+                    departureEvent = true
+                    activeToast?.let { toast ->
+                        if (toast.fadeOutStartedAtMs == null) {
+                            toast.fadeOutStartedAtMs = maxOf(nowMs, toast.startedAtMs + ARRIVAL_FADE_IN_MS)
+                        }
+                    }
+                }
             }
         }
+
+        activeToast?.let { toast ->
+            val fadeOutStartedAt = toast.fadeOutStartedAtMs
+                ?: (toast.startedAtMs + ARRIVAL_NOTIFICATION_DURATION_MS - ARRIVAL_FADE_OUT_MS)
+            if (nowMs >= fadeOutStartedAt + ARRIVAL_FADE_OUT_MS) activeToast = null
+        }
+        return departureEvent
     }
 
-    private fun drawFullscreenNotification(
-        extractor: GuiGraphicsExtractor,
-        event: MetroClientStorage.StationEvent,
-        ageMs: Long,
-        alpha: Float,
-    ) {
-        val mc = Minecraft.getInstance()
-        val font = mc.font
-        val width = extractor.guiWidth()
-        val height = extractor.guiHeight()
-        val centerX = width / 2
-        val centerY = height / 2
-        val accent = when (event.type) {
-            MetroClientStorage.StationEventType.ARRIVAL -> 0x53D7A1
-            MetroClientStorage.StationEventType.DEPARTURE -> 0x58B8F5
-        }
-        val intro = easeOutCubic((ageMs.toFloat() / TITLE_FADE_IN_MS).coerceIn(0f, 1f))
-        val scale = TITLE_SCALE * (0.88f + 0.12f * intro)
-        val verticalOffset = ((1f - intro) * 8f).roundToInt()
-        val titleWidth = (width / scale).toInt().coerceAtLeast(1)
-        val subtitle = Component.translatable(
-            when (event.type) {
-                MetroClientStorage.StationEventType.ARRIVAL -> "smetro.hud.event.arrival"
-                MetroClientStorage.StationEventType.DEPARTURE -> "smetro.hud.event.departure"
-            },
-        ).string
-
-        extractor.pose().pushMatrix()
-        extractor.pose().translate(centerX.toFloat(), (centerY - 22 + verticalOffset).toFloat())
-        extractor.pose().scale(scale)
-        extractor.textRenderer().acceptScrollingWithDefaultCenter(Component.literal(event.stationName).withColor(color(COLOR_TEXT, alpha)), -titleWidth / 2, titleWidth / 2, -4, 6)
-        extractor.pose().popMatrix()
-
-        extractor.pose().pushMatrix()
-        extractor.pose().translate(centerX.toFloat(), (centerY + 22 + verticalOffset).toFloat())
-        extractor.pose().scale(1.15f)
-        extractor.centeredText(font, subtitle, 0, 0, color(accent, alpha))
-        extractor.pose().popMatrix()
+    private fun getToastAlpha(toast: ActiveToast, nowMs: Long): Float {
+        val ageMs = (nowMs - toast.startedAtMs).coerceAtLeast(0L)
+        val fadeIn = easeOutCubic((ageMs.toFloat() / ARRIVAL_FADE_IN_MS).coerceIn(0f, 1f))
+        val fadeOutStartedAt = toast.fadeOutStartedAtMs
+            ?: (toast.startedAtMs + ARRIVAL_NOTIFICATION_DURATION_MS - ARRIVAL_FADE_OUT_MS)
+        val fadeOut = ((fadeOutStartedAt + ARRIVAL_FADE_OUT_MS - nowMs).toFloat() / ARRIVAL_FADE_OUT_MS)
+            .coerceIn(0f, 1f)
+        return minOf(fadeIn, fadeOut)
     }
 
     private fun fill(extractor: GuiGraphicsExtractor, x0: Int, y0: Int, x1: Int, y1: Int, rgb: Int, alpha: Float) {
         extractor.fill(x0, y0, x1, y1, color(rgb, alpha))
+    }
+
+    private fun ActiveTextCollector.tweakDefaultScrollingHelper(message: Component, centerX: Int, left: Int, right: Int, top: Int, bottom: Int, lineWidth: Int, lineHeight: Int, parameters: ActiveTextCollector.Parameters) {
+        val textTop = (top + bottom - lineHeight) / 2 + 1
+        val availableMessageWidth = right - left
+        if (lineWidth > availableMessageWidth) {
+            val maxPosition = lineWidth - availableMessageWidth
+            val time = Util.getMillis().toDouble() / 1000.0
+            val period = (maxPosition * 0.5F).coerceAtLeast(3.0F);
+            val alpha = sin((Math.PI / 2) * cos((Math.PI * 2) * time / period)) / 2 + 0.5
+            val pos = Mth.lerp(alpha, 0.0, maxPosition.toDouble())
+            this.accept(TextAlignment.LEFT, left - pos.toInt(), textTop, parameters, message.visualOrderText);
+        } else {
+            val textX = Mth.clamp(centerX, left + lineWidth / 2, right - lineWidth / 2);
+            this.accept(TextAlignment.CENTER, textX, textTop, parameters, message)
+        }
+
+    }
+    private fun GuiGraphicsExtractor.scrollingTextLine(message: Component, alpha: Float, centerX: Int, x: Int, y: Int, width: Int) {
+        if (alpha <= 0f || width == 0) return
+        enableScissor(x, y, x + width, y + 10)
+        val renderer = textRenderer(GuiGraphicsExtractor.HoveredTextEffects.NONE)
+        val params = renderer.defaultParameters().withOpacity(alpha)
+
+        val lineWidth: Int = Minecraft.getInstance().font.width(message)
+        val lineHeight = 9
+        renderer.tweakDefaultScrollingHelper(message, centerX, x, x + width, y, y + 10, lineWidth, lineHeight, params)
+        disableScissor()
+    }
+    private fun GuiGraphicsExtractor.scrollingTextLineLeft(message: Component, alpha: Float, x: Int, y: Int, width: Int) {
+        scrollingTextLine(message, alpha, x, x, y, width)
     }
 
     private fun color(rgb: Int, alpha: Float): Int = ARGB.color(alpha.coerceIn(0f, 1f), rgb)
