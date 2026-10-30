@@ -4,7 +4,6 @@ import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.SMetroInfo
-import com.bleudev.simplemetro.config.obj.MetroStation
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.Minecraft
@@ -50,9 +49,9 @@ internal object LineTableRenderer {
         val dimension: Identifier,
         val schemeRevision: Int,
         val lineId: Int?,
-        val previousStation: Int?,
+        val previousVisibleStation: Int?,
         val currentStation: Int?,
-        val nextStation: Int?,
+        val nextVisibleStation: Int?,
     )
 
     private data class TransferState(
@@ -93,9 +92,9 @@ internal object LineTableRenderer {
             dim,
             revision,
             storage.currentLine,
-            storage.prevStation,
+            storage.prevVisibleStation,
             storage.currentStation,
-            storage.nextStation,
+            storage.nextVisibleStation,
         )
         if (key != cachedKey) {
             tableRenderState = buildTableState(storage, SMetroInfo.getInstance(dim), scheme)
@@ -139,42 +138,32 @@ internal object LineTableRenderer {
     ): TableRenderState? {
         val detectedCurrentId = storage.currentStation
         val travelling = detectedCurrentId == null &&
-            storage.currentLine != null && storage.prevStation != null && storage.nextStation != null
+            storage.currentLine != null && storage.prevVisibleStation != null && storage.nextVisibleStation != null
 
         if (detectedCurrentId == null && !travelling) return null
-        val currentId = if (travelling) storage.prevStation ?: return null else detectedCurrentId ?: return null
-        val currentState = scheme.stations[currentId] ?: return null
+        val currentId = if (travelling) storage.prevVisibleStation ?: return null
+        else detectedCurrentId ?: return null
+        val currentState = scheme.stations[currentId]?.takeUnless { it.status.invisible } ?: return null
 
-        val lineId = if (travelling) storage.currentLine
-        else currentState.lines.firstOrNull { it.id == storage.currentLine }?.id
+        // Keep the line selected by the extractor. A station can belong to more than one line;
+        // picking the first line here would make the panel jump to an unrelated branch.
+        val lineId = storage.currentLine?.takeIf { id -> info.lines.any { it.id == id } }
             ?: currentState.lines.firstOrNull()?.id
         val sourceLine = lineId?.let { id -> info.lines.firstOrNull { it.id == id } }
         val line = sourceLine?.let { MetroSchemeExtractor.StationLineRenderState(it.id, it.name, it.color) }
 
-//        val invisibleIds = info.stations.filter { it.status.invisible }.map { it.id }
-        val nextId = when {
-            travelling -> storage.nextStation
-            line != null -> findNextAfterCurrent(
-                sourceLine.stations,
-                currentId,
-                storage.prevStation,
-                storage.nextStation
-            )?.takeIf { it != currentId }
-            else -> null
-        }
-        val nextState = nextId?.let(scheme.stations::get)
+        val nextId = storage.nextVisibleStation
+        val nextState = nextId?.let(scheme.stations::get)?.takeUnless { it.status.invisible }
 
-        var routeIds = sourceLine?.stations.orEmpty()
+        // Invisible stations remain in the track geometry used by LineTableExtractor, but never
+        // become visual stops on this diagram.
+        var routeIds = sourceLine?.stations.orEmpty().filter { id ->
+            scheme.stations[id]?.status?.invisible != true
+        }
         val startIndex = routeIds.indexOf(currentId)
-        if (startIndex >= 0) {
-            val directionTarget = nextId ?: storage.prevStation?.takeIf { it != currentId }
-            val targetIndex = directionTarget?.let(routeIds::indexOf) ?: -1
-            if (targetIndex in 0..<startIndex) {
-                routeIds = routeIds.asReversed()
-            } else if (directionTarget == null && storage.prevStation != null && storage.prevStation != currentId) {
-                val previousIndex = routeIds.indexOf(storage.prevStation)
-                if (previousIndex > startIndex) routeIds = routeIds.asReversed()
-            }
+        if (startIndex >= 0 && nextId != null) {
+            val targetIndex = routeIds.indexOf(nextId)
+            if (targetIndex in 0..<startIndex) routeIds = routeIds.asReversed()
         }
 
         val orientedStart = routeIds.indexOf(currentId)
@@ -196,10 +185,13 @@ internal object LineTableRenderer {
             val linkedIds = LinkedHashSet<Int>()
             linkedIds.addAll(station.transfers)
             scheme.stations.values.asSequence()
-                .filter { station.id in it.transfers }
+                .filter { !it.status.invisible && station.id in it.transfers }
                 .forEach { linkedIds.add(it.id) }
             linkedIds.forEach { transferStationId ->
-                scheme.stations[transferStationId]?.lines?.forEach(::addTransfer)
+                scheme.stations[transferStationId]
+                    ?.takeUnless { it.status.invisible }
+                    ?.lines
+                    ?.forEach(::addTransfer)
             }
         }
 
@@ -219,24 +211,6 @@ internal object LineTableRenderer {
             transfers,
             travelling,
         )
-    }
-
-    private fun findNextAfterCurrent(
-        lineStations: List<Int>,
-        currentStation: Int,
-        previousStation: Int?,
-        storedNextStation: Int?
-    ): Int? {
-        val currentIndex = lineStations.indexOf(currentStation)
-        if (currentIndex < 0) return storedNextStation?.takeIf { it != currentStation }
-
-        if (previousStation != null && previousStation != currentStation) {
-            val previousIndex = lineStations.indexOf(previousStation)
-            if (previousIndex == currentIndex - 1) return lineStations.getOrNull(currentIndex + 1)
-            if (previousIndex == currentIndex + 1) return lineStations.getOrNull(currentIndex - 1)
-        }
-
-        return storedNextStation?.takeIf { it != currentStation }
     }
 
     private fun drawPanel(
@@ -282,9 +256,11 @@ internal object LineTableRenderer {
         val nextColor = if (nextStatus != null) 0xFFFFA2 else COLOR_TEXT
 
         if (state.travelling) {
+            val nextName = state.nextStation?.name?.let { fit(font, it, colWidth) }
+                ?: fit(font, Component.translatable(if (state.line == null) "smetro.hud.no_next_station" else "smetro.hud.terminal").string, colWidth)
             extractor.text(
                 font,
-                Component.literal(fit(font, state.currentStation.name, colWidth * 2)),
+                Component.literal(nextName),
                 col1,
                 y + 26,
                 color(currentColor, alpha),
@@ -318,8 +294,6 @@ internal object LineTableRenderer {
             drawTransfers(extractor, x + 9, y + 61, state.transfers, alpha)
         }
     }
-
-    private fun statusLabel(status: MetroStation.Status): String? = status.message?.string
 
     private fun drawRouteDiagram(
         extractor: GuiGraphicsExtractor,

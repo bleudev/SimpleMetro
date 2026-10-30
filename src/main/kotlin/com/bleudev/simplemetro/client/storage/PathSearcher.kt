@@ -1,5 +1,6 @@
 package com.bleudev.simplemetro.client.storage
 
+import com.bleudev.simplemetro.config.SMetroInfo
 import net.minecraft.resources.Identifier
 
 class PathSearcher {
@@ -37,6 +38,11 @@ class PathSearcher {
 
         require(from in 1..matrix.size) { "Invalid start station: $from" }
         require(to in 1..matrix.size) { "Invalid destination station: $to" }
+
+        val stations = SMetroInfo.getInstance(dim).stations.associateBy { it.id }
+        if (stations[from]?.status?.invisible != false || stations[to]?.status?.invisible != false) {
+            return null
+        }
 
         val distances = DoubleArray(matrix.size) { Double.POSITIVE_INFINITY }
         val previous = IntArray(matrix.size) { -1 }

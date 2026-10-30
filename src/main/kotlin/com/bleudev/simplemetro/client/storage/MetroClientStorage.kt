@@ -8,9 +8,15 @@ import java.util.*
 
 @Environment(EnvType.CLIENT)
 class MetroClientStorage private constructor() {
+    /** Station the player is currently standing at. Invisible waypoints are never stored here. */
     var currentStation: Int? = null
-    var prevStation: Int? = null
-    var nextStation: Int? = null
+
+    /** Last visible station passed; while travelling this is the origin of the active track segment. */
+    var prevVisibleStation: Int? = null
+
+    /** Next visible station on the selected line, after any invisible geometry waypoints. */
+    var nextVisibleStation: Int? = null
+
     var currentLine: Int? = null
     var stationProgress: Float? = null
 

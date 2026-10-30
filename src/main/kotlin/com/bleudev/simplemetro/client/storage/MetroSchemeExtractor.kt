@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.TextColor
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
-import kotlin.math.abs
 import kotlin.math.sqrt
 
 @Environment(EnvType.CLIENT)
@@ -70,29 +69,48 @@ internal class MetroSchemeExtractor private constructor() {
         val matrix = AdjacencyMatrix(stations.size)
 
         matrix.fill { i, j ->
-            if (i == j) return@fill 0.0
-            else {
-                val si = stations[i]
-                val sj = stations[j]
-                if (si == null || sj == null) return@fill null
+            val si = stations[i] ?: return@fill null
 
-                val isTransfer = j in si.transfers || i in sj.transfers
-                var bestSqr: Double? = if (isTransfer) si.pos.distSqr(sj.pos) else null
-                // Check every line `i` has. `j` must be neighbor!
-                for ((lineId) in si.lines) {
-                    lmap[lineId]?.let { line ->
-                        val ii = line.stations.indexOf(i)
-                        val ji = line.stations.indexOf(j)
-                        if (ii >= 0 && ji >= 0 && abs(ii-ji) == 1) {
-                            val d = si.pos.distSqr(sj.pos)
-                            if (bestSqr == null || d < bestSqr) {
-                                bestSqr = d
+            // Invisible stations are geometry waypoints, not graph vertices or destinations.
+            if (si.status.invisible) return@fill null
+            if (i == j) return@fill 0.0
+
+            val sj = stations[j] ?: return@fill null
+            if (sj.status.invisible) return@fill null
+
+            val isTransfer = j in si.transfers || i in sj.transfers
+            var bestDistance: Double? = if (isTransfer) sqrt(si.pos.distSqr(sj.pos)) else null
+
+            // Walk each line in both directions until the first visible station. Any invisible
+            // stations in between contribute distance, but are not exposed as route stops.
+            for (lineId in si.lines.map { it.id }.distinct()) {
+                val line = lmap[lineId] ?: continue
+                val startIndices = line.stations.indices.filter { line.stations[it] == i }
+
+                for (startIndex in startIndices) {
+                    for (direction in intArrayOf(-1, 1)) {
+                        var index = startIndex + direction
+                        var previousPos = si.pos
+                        var distance = 0.0
+
+                        while (index in line.stations.indices) {
+                            val station = stations[line.stations[index]] ?: break
+                            distance += sqrt(previousPos.distSqr(station.pos))
+                            previousPos = station.pos
+
+                            if (!station.status.invisible) {
+                                if (station.id == j && (bestDistance == null || distance < bestDistance)) {
+                                    bestDistance = distance
+                                }
+                                break
                             }
+                            index += direction
                         }
                     }
                 }
-                return@fill bestSqr?.let(::sqrt)
             }
+
+            bestDistance
         }
         adjacencyMatrices[dim] = matrix
         revisions[dim] = (revisions[dim] ?: 0) + 1
@@ -177,12 +195,7 @@ internal class MetroSchemeExtractor private constructor() {
         override fun equals(other: Any?): Boolean {
             return other is StationLineRenderState && other.id == id
         }
-        override fun hashCode(): Int {
-            var result = id
-            result = 31 * result + color
-            result = 31 * result + name.hashCode()
-            return result
-        }
+        override fun hashCode(): Int = id
     }
 
     data class StationRenderState(
@@ -197,11 +210,11 @@ internal class MetroSchemeExtractor private constructor() {
         val whiteColor: Int get() = ARGB.color(.9f, 0xffffff)
         val grayColor: Int get() = ARGB.color(.9f, TextColor.GRAY.value)
 
-        fun addLine(line: MetroLine): StationRenderState = StationRenderState(
-            id, pos, name,
-            HashSet(lines).apply { add(StationLineRenderState(line.id, line.name, line.color)) }.toList(),
-            transfers, status
-        )
+        fun addLine(line: MetroLine): StationRenderState {
+            val updatedLines = lines.filterNot { it.id == line.id } +
+                StationLineRenderState(line.id, line.name, line.color)
+            return copy(lines = updatedLines)
+        }
     }
     data class ConnectionRenderState(val pos1: BlockPos, val pos2: BlockPos, val color: Int) {
         val argbColor: Int get() = ARGB.color(.8f, color)
