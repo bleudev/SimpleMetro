@@ -40,7 +40,6 @@ class SMetroDefaultLanguage(output: FabricPackOutput, registryLookup: Completabl
         builder.add("smetro.hud.route", "METRO ROUTE")
         builder.add("smetro.hud.current", "CURRENT STATION")
         builder.add("smetro.hud.from", "LAST STATION")
-        builder.add("smetro.hud.next", "NEXT STATION")
         builder.add("smetro.hud.terminal", "Terminal station")
         builder.add("smetro.hud.transfers", "TRANSFERS")
         builder.add("smetro.hud.no_transfers", "No transfers")
@@ -90,7 +89,6 @@ class SMetroRussianLanguage(output: FabricPackOutput, registryLookup: Completabl
         builder.add("smetro.hud.route", "МАРШРУТ МЕТРО")
         builder.add("smetro.hud.current", "ТЕКУЩАЯ СТАНЦИЯ")
         builder.add("smetro.hud.from", "ОТПРАВИЛИСЬ ОТ")
-        builder.add("smetro.hud.next", "СЛЕДУЮЩАЯ СТАНЦИЯ")
         builder.add("smetro.hud.terminal", "Конечная станция")
         builder.add("smetro.hud.transfers", "ПЕРЕСАДКИ")
         builder.add("smetro.hud.no_transfers", "Без пересадок")
@@ -140,8 +138,7 @@ class SMetroPreReformRussianLanguage(output: FabricPackOutput, registryLookup: C
         builder.add("smetro.hud.route", "МАРШРУТЪ МЕТРО")
         builder.add("smetro.hud.current", "ТЕКУЩАЯ СТАНЦІЯ")
         builder.add("smetro.hud.from", "ОТПРАВЛЕНІЕ ОТЪ")
-        builder.add("smetro.hud.next", "СЛѢДУЮЩАЯ СТАНЦІЯ")
-        builder.add("smetro.hud.terminal", "Конечная станція")
+        builder.add("smetro.hud.terminal", "—")
         builder.add("smetro.hud.transfers", "ПЕРЕСАДКИ")
         builder.add("smetro.hud.no_transfers", "Безъ пересадокъ")
         builder.add("smetro.hud.event.arrival", "ПРИБЫТІЕ НА СТАНЦІЮ")
@@ -150,7 +147,7 @@ class SMetroPreReformRussianLanguage(output: FabricPackOutput, registryLookup: C
         builder.add("smetro.hud.no_next_station", "—")
         builder.add("smetro.hud.here", "ЗДѢСЬ")
         builder.add("smetro.hud.next_short", "ДАЛѢЕ")
-        builder.add("smetro.hud.next", "Следующая станция") // todo: rpr
+        builder.add("smetro.hud.next", "Слѣдующая станція")
         builder.add("smetro.hud.from_short", "ОТЪ")
     }
 }

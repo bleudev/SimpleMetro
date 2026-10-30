@@ -261,7 +261,7 @@ internal object LineTableRenderer {
         val colWidth = (PANEL_WIDTH - 24) / 2
         extractor.text(
             font,
-            Component.translatable(if (state.travelling) "smetro.hud.next_short" else "smetro.hud.here"),
+            Component.translatable(if (state.travelling) "smetro.hud.next" else "smetro.hud.here"),
             col1,
             y + 17,
             color(COLOR_MUTED, alpha),
