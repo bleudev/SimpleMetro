@@ -1,7 +1,7 @@
 package com.bleudev.simplemetro.config
 
 import com.bleudev.simplemetro.SMetro
-import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
+import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.obj.MetroLine
 import com.bleudev.simplemetro.config.obj.MetroStation
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ServerboundMetroInfoEdit
@@ -57,10 +57,11 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
         }
 
         private fun collectDimensions(): List<Identifier> {
+            Files.createDirectories(basePath)
             return Files.walk(basePath).filter {
                 val f = it.toFile()
                 return@filter f.isFile && f.extension == "json"
-            }.map { Identifier.fromNamespaceAndPath(it.parent.name, it.nameWithoutExtension) }.toList()
+            }.toList().mapNotNull { if (it.parent != basePath) Identifier.fromNamespaceAndPath(it.parent.name, it.nameWithoutExtension) else null }.toList()
         }
 
         private fun internalSave(dim: Identifier, info: SMetroInfo) {

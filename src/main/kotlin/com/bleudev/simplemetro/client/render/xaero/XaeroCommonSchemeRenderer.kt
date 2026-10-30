@@ -1,6 +1,6 @@
 package com.bleudev.simplemetro.client.render.xaero
 
-import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
+import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.core.BlockPos

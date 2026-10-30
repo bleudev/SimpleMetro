@@ -36,6 +36,22 @@ class SMetroDefaultLanguage(output: FabricPackOutput, registryLookup: Completabl
         builder.add("xaero.map.station.tooltip.transfers.one", "Transfer to the station")
         builder.add("xaero.map.station.tooltip.transfers.some", "Transfers at stations")
         builder.add("xaero.map.station.tooltip.id", "ID: %d")
+
+        builder.add("smetro.hud.route", "METRO ROUTE")
+        builder.add("smetro.hud.current", "CURRENT STATION")
+        builder.add("smetro.hud.from", "LAST STATION")
+        builder.add("smetro.hud.terminal", "Terminal station")
+        builder.add("smetro.hud.transfers", "TRANSFERS")
+        builder.add("smetro.hud.no_transfers", "No transfers")
+        builder.add("smetro.hud.event.arrival", "ARRIVED AT")
+        builder.add("smetro.hud.event.departure", "DEPARTING FROM")
+        builder.add("smetro.hud.station", "STATION")
+        builder.add("smetro.hud.no_line", "NO LINE")
+        builder.add("smetro.hud.no_next_station", "—")
+        builder.add("smetro.hud.here", "HERE")
+        builder.add("smetro.hud.next_short", "NEXT")
+        builder.add("smetro.hud.next", "The next station is")
+        builder.add("smetro.hud.from_short", "FROM")
     }
 }
 
@@ -70,6 +86,22 @@ class SMetroRussianLanguage(output: FabricPackOutput, registryLookup: Completabl
         builder.add("xaero.map.station.tooltip.transfers.one", "Пересадка на станцию")
         builder.add("xaero.map.station.tooltip.transfers.some", "Пересадка на станции")
         builder.add("xaero.map.station.tooltip.id", "Айди: %d")
+
+        builder.add("smetro.hud.route", "МАРШРУТ МЕТРО")
+        builder.add("smetro.hud.current", "ТЕКУЩАЯ СТАНЦИЯ")
+        builder.add("smetro.hud.from", "ОТПРАВИЛИСЬ ОТ")
+        builder.add("smetro.hud.terminal", "Конечная станция")
+        builder.add("smetro.hud.transfers", "ПЕРЕСАДКИ")
+        builder.add("smetro.hud.no_transfers", "Без пересадок")
+        builder.add("smetro.hud.event.arrival", "ПРИБЫТИЕ НА СТАНЦИЮ")
+        builder.add("smetro.hud.event.departure", "ОТПРАВЛЕНИЕ СО СТАНЦИИ")
+        builder.add("smetro.hud.station", "СТАНЦИЯ")
+        builder.add("smetro.hud.no_line", "БЕЗ ЛИНИИ")
+        builder.add("smetro.hud.no_next_station", "—")
+        builder.add("smetro.hud.here", "ЗДЕСЬ")
+        builder.add("smetro.hud.next_short", "ДАЛЕЕ")
+        builder.add("smetro.hud.next", "Следующая станция")
+        builder.add("smetro.hud.from_short", "ОТ")
     }
 }
 
@@ -104,5 +136,21 @@ class SMetroPreReformRussianLanguage(output: FabricPackOutput, registryLookup: C
         builder.add("xaero.map.station.tooltip.transfers.one", "Пересадка на станцію")
         builder.add("xaero.map.station.tooltip.transfers.some", "Пересадки на станціи")
         builder.add("xaero.map.station.tooltip.id", "Номеръ: %d")
+
+        builder.add("smetro.hud.route", "МАРШРУТЪ МЕТРО")
+        builder.add("smetro.hud.current", "ТЕКУЩАЯ СТАНЦІЯ")
+        builder.add("smetro.hud.from", "ОТПРАВЛЕНІЕ ОТЪ")
+        builder.add("smetro.hud.terminal", "—")
+        builder.add("smetro.hud.transfers", "ПЕРЕСАДКИ")
+        builder.add("smetro.hud.no_transfers", "Безъ пересадокъ")
+        builder.add("smetro.hud.event.arrival", "ПРИБЫТІЕ НА СТАНЦІЮ")
+        builder.add("smetro.hud.event.departure", "ОТПРАВЛЕНІЕ СО СТАНЦІИ")
+        builder.add("smetro.hud.station", "СТАНЦІЯ")
+        builder.add("smetro.hud.no_line", "БЕЗЪ ЛИНІИ")
+        builder.add("smetro.hud.no_next_station", "—")
+        builder.add("smetro.hud.here", "ЗДѢСЬ")
+        builder.add("smetro.hud.next_short", "ДАЛѢЕ")
+        builder.add("smetro.hud.next", "Слѣдующая станція")
+        builder.add("smetro.hud.from_short", "ОТЪ")
     }
 }

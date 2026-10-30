@@ -1,6 +1,6 @@
 package com.bleudev.simplemetro.client.render.xaero
 
-import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
+import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.mojang.math.Axis
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment

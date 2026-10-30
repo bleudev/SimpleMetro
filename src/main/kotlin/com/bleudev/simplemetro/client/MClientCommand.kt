@@ -498,13 +498,6 @@ object MClientCommand {
         return 1
     }
 
-    /**
-     * 2 Done + New line created
-     * 1 Done
-     * -1 Station doesn't exist
-     * -2 Around method for corners failed (id isn't corner)
-     * -3 Between method ids isn't neighbors
-     * */
     private fun placeStationAdd(id: Int, lineId: Int, betweenOrAround: List<Int>): Int {
         val info = SMetroInfo.getInstance(dim)
         val lines = info.lines.toMutableList()
@@ -557,12 +550,6 @@ object MClientCommand {
         }
     }
 
-    /**
-     * 1 Done
-     * -1 Station doesn't exist
-     * -2 Line doesn't exist
-     * -3 Stations isn't placed in this line
-     * */
     private fun placeStationRemove(id: Int, lineId: Int): Int {
         val info = SMetroInfo.getInstance(dim)
         val lines = info.lines.toMutableList()

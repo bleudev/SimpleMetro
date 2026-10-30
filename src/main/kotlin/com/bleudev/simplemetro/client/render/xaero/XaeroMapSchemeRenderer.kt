@@ -1,7 +1,8 @@
 package com.bleudev.simplemetro.client.render.xaero
 
-import com.bleudev.simplemetro.client.render.MetroSchemeExtractor
-import com.bleudev.simplemetro.client.render.PathSearcher
+import com.bleudev.simplemetro.client.render.components.StationLinesNameTooltipComponent
+import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
+import com.bleudev.simplemetro.client.storage.PathSearcher
 import com.bleudev.simplemetro.config.obj.MetroStation
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
@@ -15,11 +16,8 @@ import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPosition
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.network.chat.Component
-import net.minecraft.network.chat.TextColor
 import net.minecraft.resources.Identifier
-import net.minecraft.util.ARGB
 import net.minecraft.util.FormattedCharSequence
-import java.lang.reflect.Modifier
 
 @Environment(EnvType.CLIENT)
 internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
@@ -134,59 +132,6 @@ internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
         extractor.tooltip(Minecraft.getInstance().font, lines.toList(), 0, 0, DefaultTooltipPositioner.INSTANCE, null, false)
 
         extractor.pose().popMatrix()
-    }
-
-    @Suppress("SameParameterValue")
-    private fun getIntField(target: Any, fieldName: String, fallback: Int): Int {
-        try {
-            var cursor = target.javaClass
-            @Suppress("SENSELESS_COMPARISON")
-            while (cursor != null) {
-                try {
-                    val field = cursor.getDeclaredField(fieldName)
-                    field.isAccessible = true
-                    val owner = if (Modifier.isStatic(field.modifiers)) null else target
-                    val value = field.get(owner)
-                    if (value is Number) return value.toInt()
-                    break
-                } catch (_: Exception) {}
-                cursor = cursor.getSuperclass()
-            }
-        } catch (_: Exception) {}
-        return fallback
-    }
-
-    private class StationLinesNameTooltipComponent(
-        lines: List<MetroSchemeExtractor.StationLineRenderState>,
-        private val name: String,
-        private val status: MetroStation.Status,
-    ) : ClientTooltipComponent {
-        private val lines: List<MetroSchemeExtractor.StationLineRenderState> = lines.sortedBy { it.id }
-
-        override fun getHeight(font: Font): Int = font.lineHeight + 1
-        override fun getWidth(font: Font): Int = font.width(name) + 8 * lines.size
-        override fun extractText(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) {
-            var x = x
-            var styledName = Component.literal(name)
-            var nameColor = ARGB.color(1f, if (status.open) if (lines.size == 1) lines[0].color else 0xffffff else TextColor.GRAY.value)
-            if (status.open) {
-                nameColor = ARGB.setBrightness(nameColor, .9f)
-            } else {
-                styledName = styledName.withStyle(ChatFormatting.ITALIC)
-            }
-
-            for ((lineId, _, lineColor) in lines) {
-                val col = ARGB.setBrightness(ARGB.color(1f, lineColor), .9f)
-                graphics.fill(x, y+1, x+6, y+7, col)
-                graphics.pose().pushMatrix()
-                graphics.pose().translate(x.toFloat(), y.toFloat())
-                graphics.pose().scale(.5f)
-                graphics.centeredText(font, lineId.toString(), 6, 4, -1)
-                graphics.pose().popMatrix()
-                x += 8
-            }
-            graphics.text(font, styledName, x, y, nameColor)
-        }
     }
 
     abstract class MapGraphicsExtractor(private val original: GuiGraphicsExtractor) : CommonGraphicsExtractor {
