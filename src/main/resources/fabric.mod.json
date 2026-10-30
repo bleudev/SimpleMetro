@@ -21,6 +21,9 @@
     ],
     "main": [
       "com.bleudev.simplemetro.SMetro"
+    ],
+    "voicechat": [
+      "com.bleudev.simplemetro.voicechat.VoicechatSMetroPlugin"
     ]
   },
   "mixins": [

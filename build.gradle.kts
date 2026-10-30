@@ -63,6 +63,7 @@ dependencies {
     implementation(files("libs/xaerolib-fabric-26.3-1.7.17.jar"))
 
     implementation("maven.modrinth:modmenu:21.0.0")
+    implementation("maven.modrinth:simple-voice-chat:${project.property("simple_voice_chat")}")
 
     implementation("org.quiltmc.parsers:gson:0.3.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
