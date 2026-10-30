@@ -7,7 +7,6 @@ import com.bleudev.simplemetro.config.SMetroInfo
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.PlayerFaceExtractor
 import net.minecraft.client.renderer.RenderPipelines
@@ -228,7 +227,7 @@ internal object LineTableRenderer {
 
         val font = Minecraft.getInstance().font
         val lineLabel = state.line?.name ?: Component.translatable("smetro.hud.no_line").string
-        extractor.text(font, Component.literal(fit(font, lineLabel, PANEL_WIDTH - 42)), x + 9, y + 4, color(COLOR_MUTED, alpha))
+        extractor.textRenderer().acceptScrolling(Component.literal(lineLabel).withColor(color(COLOR_MUTED, alpha)), x + 9, x + 9, x + 9 + PANEL_WIDTH - 42, y + 4, y + 12)
 
         val col1 = x + 9
         val col2 = x + (PANEL_WIDTH / 2) + 2
@@ -256,35 +255,21 @@ internal object LineTableRenderer {
         val nextColor = if (nextStatus != null) 0xFFFFA2 else COLOR_TEXT
 
         if (state.travelling) {
-            val nextName = state.nextStation?.name?.let { fit(font, it, colWidth) }
-                ?: fit(font, Component.translatable(if (state.line == null) "smetro.hud.no_next_station" else "smetro.hud.terminal").string, colWidth)
-            extractor.text(
-                font,
-                Component.literal(nextName),
-                col1,
-                y + 26,
-                color(currentColor, alpha),
-            )
+            val nextName = state.nextStation?.name ?: Component.translatable(if (state.line == null) "smetro.hud.no_next_station" else "smetro.hud.terminal").string
+            extractor.textRenderer().acceptScrolling(Component.literal(nextName).withColor(color(currentColor, alpha)), col1, col1, col1 + colWidth * 2, y + 26, y + 36)
         }
         else {
-            extractor.text(
-                font,
-                Component.literal(fit(font, state.currentStation.name, colWidth)),
-                col1,
-                y + 26,
-                color(currentColor, alpha),
-            )
-            val nextName = state.nextStation?.name?.let { fit(font, it, colWidth) }
-                ?: fit(font, Component.translatable(if (state.line == null) "smetro.hud.no_next_station" else "smetro.hud.terminal").string, colWidth)
-            extractor.text(font, Component.literal(nextName), col2, y + 26, color(nextColor, alpha))
+            extractor.textRenderer().acceptScrolling(Component.literal(state.currentStation.name).withColor(color(currentColor, alpha)), col1, col1, col1 + colWidth, y + 26, y + 36)
+            val nextName = state.nextStation?.name ?: Component.translatable(if (state.line == null) "smetro.hud.no_next_station" else "smetro.hud.terminal").string
+            extractor.textRenderer().acceptScrolling(Component.literal(nextName).withColor(color(nextColor, alpha)), col2, col2, col2 + colWidth, y + 26, y + 36)
         }
 
 
-        if (currentStatus != null) {
+        if (currentStatus != null && !state.travelling) {
             extractor.text(font, Component.literal(currentStatus), col1, y + 36, color(0xFFFF8176.toInt(), alpha))
         }
         if (nextStatus != null) {
-            extractor.text(font, Component.literal(nextStatus), col2, y + 36, color(0xFFFFB36B.toInt(), alpha))
+            extractor.text(font, Component.literal(nextStatus), if (state.travelling) col1 else col2, y + 36, color(0xFFFFB36B.toInt(), alpha))
         }
 
         if (state.line != null) {
@@ -343,7 +328,6 @@ internal object LineTableRenderer {
         transfers: List<TransferState>,
         alpha: Float,
     ) {
-        val font = Minecraft.getInstance().font
         val shownCount = minOf(transfers.size, 3)
         val badgeWidth = (PANEL_WIDTH - 20 - (shownCount - 1) * 3) / shownCount
         for (i in 0 until shownCount) {
@@ -351,12 +335,8 @@ internal object LineTableRenderer {
             val bx = x + i * (badgeWidth + 3)
             fill(extractor, bx, y, bx + badgeWidth, y + 10, COLOR_BADGE, alpha)
             fill(extractor, bx, y, bx + 2, y + 10, transfer.color, alpha)
-            val label = if (transfers.size > 3 && i == shownCount - 1) {
-                "+${transfers.size - 2}"
-            } else {
-                fit(font, transfer.name, badgeWidth - 8)
-            }
-            extractor.text(font, Component.literal(label), bx + 5, y + 1, color(COLOR_TEXT, alpha))
+            val label = if (transfers.size > 3 && i == shownCount - 1) "+${transfers.size - 2}" else transfer.name
+            extractor.textRenderer().acceptScrolling(Component.literal(label), bx + 5, bx + 5, bx + 5 + badgeWidth - 8, y + 1, y + 10)
         }
     }
 
@@ -391,7 +371,7 @@ internal object LineTableRenderer {
         val intro = easeOutCubic((ageMs.toFloat() / TITLE_FADE_IN_MS).coerceIn(0f, 1f))
         val scale = TITLE_SCALE * (0.88f + 0.12f * intro)
         val verticalOffset = ((1f - intro) * 8f).roundToInt()
-        val title = fit(font, event.stationName, (width / scale).toInt().coerceAtLeast(1))
+        val titleWidth = (width / scale).toInt().coerceAtLeast(1)
         val subtitle = Component.translatable(
             when (event.type) {
                 MetroClientStorage.StationEventType.ARRIVAL -> "smetro.hud.event.arrival"
@@ -402,7 +382,7 @@ internal object LineTableRenderer {
         extractor.pose().pushMatrix()
         extractor.pose().translate(centerX.toFloat(), (centerY - 22 + verticalOffset).toFloat())
         extractor.pose().scale(scale)
-        extractor.centeredText(font, title, 0, 0, color(COLOR_TEXT, alpha))
+        extractor.textRenderer().acceptScrollingWithDefaultCenter(Component.literal(event.stationName).withColor(color(COLOR_TEXT, alpha)), -titleWidth / 2, titleWidth / 2, -4, 6)
         extractor.pose().popMatrix()
 
         extractor.pose().pushMatrix()
@@ -417,15 +397,6 @@ internal object LineTableRenderer {
     }
 
     private fun color(rgb: Int, alpha: Float): Int = ARGB.color(alpha.coerceIn(0f, 1f), rgb)
-
-    private fun fit(font: Font, text: String, maxWidth: Int): String {
-        if (font.width(text) <= maxWidth) return text
-        var end = text
-        while (end.isNotEmpty() && font.width("$end…") > maxWidth) {
-            end = end.dropLast(1)
-        }
-        return if (end.isEmpty()) "" else "$end…"
-    }
 
     private fun approach(value: Float, target: Float, amount: Float): Float {
         if (value < target) return (value + amount).coerceAtMost(target)
