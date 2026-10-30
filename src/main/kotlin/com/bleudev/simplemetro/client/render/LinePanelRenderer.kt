@@ -149,6 +149,11 @@ internal object LinePanelRenderer {
                 }
             } else {
                 panelTransition = null
+                val panelTextAlpha = toast?.let { active ->
+                    val fadeOutStartedAt = active.fadeOutStartedAtMs
+                        ?: (active.startedAtMs + ARRIVAL_NOTIFICATION_DURATION_MS - ARRIVAL_FADE_OUT_MS)
+                    if (nowMs >= fadeOutStartedAt) alpha * (1f - toastAlpha) else 0f
+                } ?: alpha
                 drawPanel(
                     extractor,
                     x + slide,
@@ -156,7 +161,7 @@ internal object LinePanelRenderer {
                     tableRenderState!!,
                     storage.stationProgress,
                     alpha,
-                    alpha * (1f - toastAlpha),
+                    panelTextAlpha,
                 )
                 toast?.let { active ->
                     drawArrivalNotificationPanel(extractor, x + slide, y, active.event, alpha * toastAlpha)
