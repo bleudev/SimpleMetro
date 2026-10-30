@@ -171,8 +171,6 @@ class LinePanelExtractor private constructor() {
             return
         }
 
-        // Between visible stations, project against every leg of the polyline. Invisible stations
-        // remain in activePath.points and therefore preserve square turns and vertical changes.
         if (activePath == null && storage.prevVisibleStation != null) {
             setActivePath(
                 storage,
@@ -191,8 +189,6 @@ class LinePanelExtractor private constructor() {
                 storage.stationProgress = projection.progress.toFloat().coerceIn(0f, 1f)
                 offTrackTicks = 0
             } else {
-                // A few ticks of tolerance avoid losing the HUD on corners and at the edge of
-                // the station detection radius.
                 offTrackTicks++
                 if (offTrackTicks > OFF_TRACK_GRACE_TICKS) clearRoute(storage)
             }
@@ -201,7 +197,6 @@ class LinePanelExtractor private constructor() {
         }
     }
 
-    /** Detect visible stations only. Invisible stations are track waypoints, never stops. */
     private fun detectVisibleStation(
         stations: List<MetroStation>,
         stationsById: Map<Int, MetroStation>,
@@ -225,7 +220,6 @@ class LinePanelExtractor private constructor() {
             }
         }
 
-        // Hysteresis prevents arrival/departure spam while the player stands near a station.
         if (previousCurrent != null) {
             val previous = stationsById[previousCurrent]
             if (previous != null && !previous.status.invisible) {

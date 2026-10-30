@@ -71,7 +71,6 @@ internal class MetroSchemeExtractor private constructor() {
         matrix.fill { i, j ->
             val si = stations[i] ?: return@fill null
 
-            // Invisible stations are geometry waypoints, not graph vertices or destinations.
             if (si.status.invisible) return@fill null
             if (i == j) return@fill 0.0
 
@@ -81,8 +80,6 @@ internal class MetroSchemeExtractor private constructor() {
             val isTransfer = j in si.transfers || i in sj.transfers
             var bestDistance: Double? = if (isTransfer) sqrt(si.pos.distSqr(sj.pos)) else null
 
-            // Walk each line in both directions until the first visible station. Any invisible
-            // stations in between contribute distance, but are not exposed as route stops.
             for (lineId in si.lines.map { it.id }.distinct()) {
                 val line = lmap[lineId] ?: continue
                 val startIndices = line.stations.indices.filter { line.stations[it] == i }
@@ -163,7 +160,6 @@ internal class MetroSchemeExtractor private constructor() {
         return adjacencyMatrices[dim]!!
     }
 
-    /** Changes whenever a dimension's station/line render data is rebuilt. */
     fun getRevision(dim: Identifier): Int = revisions[dim] ?: 0
 
     companion object {
