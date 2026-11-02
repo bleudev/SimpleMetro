@@ -1,4 +1,4 @@
-package com.bleudev.simplemetro.voicechat
+package com.bleudev.simplemetro.compat.svc
 
 import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.announcement.AnnouncementTransportState
@@ -9,7 +9,7 @@ import de.maxhenkel.voicechat.api.events.EventRegistration
 import de.maxhenkel.voicechat.api.events.VoicechatServerStartedEvent
 import javax.imageio.ImageIO
 
-class VoicechatSMetroPlugin : VoicechatPlugin {
+class SVCPlugin : VoicechatPlugin {
     override fun getPluginId(): String = SMetro.ID
 
     override fun initialize(api: VoicechatApi) = Unit
@@ -32,7 +32,7 @@ class VoicechatSMetroPlugin : VoicechatPlugin {
 
             serverApi.registerVolumeCategory(category)
             announcements = category
-            StationAnnouncementServer.start(serverApi)
+            SVCServerAnnouncements.start(serverApi)
         } catch (exception: Exception) {
             AnnouncementTransportState.reset()
             SMetro.LOGGER.error("Simple Voice Chat station announcements could not be initialized", exception)

@@ -9,12 +9,11 @@ import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
 import net.minecraft.resources.Identifier
 
-class ClientboundMetroInfoSync(val dimensionMap: Map<Identifier, SMetroInfo>, val voicechatAnnouncementsAvailable: Boolean = false) : CustomPacketPayload {
+class ClientboundMetroInfoSync(val dimensionMap: Map<Identifier, SMetroInfo>) : CustomPacketPayload {
     companion object : IPacketCompanion<ClientboundMetroInfoSync> {
         override val id = SMetro.resolve("packet/clientbound/sync/metro_info")
         override val codec: StreamCodec<RegistryFriendlyByteBuf, ClientboundMetroInfoSync> = StreamCodec.composite(
             ByteBufCodecs.map(::HashMap, Identifier.STREAM_CODEC, SMetroInfo.STREAM_CODEC), ClientboundMetroInfoSync::dimensionMap,
-            ByteBufCodecs.BOOL, ClientboundMetroInfoSync::voicechatAnnouncementsAvailable,
             ::ClientboundMetroInfoSync
         )
     }

@@ -23,10 +23,10 @@ class MetroClientStorage private constructor() {
         LinePanelExtractor.getInstance().playerTick(this, player, level)
     }
 
-    fun publishStationEvent(type: StationEventType, stationId: Int, stationName: String) {
+    fun publishStationEvent(type: StationEventType, stationId: Int, stationName: String, announcementStationId: Int? = stationId) {
         if (stationEvents.size >= MAX_QUEUED_STATION_EVENTS) stationEvents.removeFirst()
         if (soundEvents.size >= MAX_QUEUED_STATION_EVENTS) soundEvents.removeFirst()
-        val event = StationEvent(++nextEventId, type, stationId, stationName)
+        val event = StationEvent(++nextEventId, type, stationId, stationName, announcementStationId)
         stationEvents.addLast(event)
         soundEvents.addLast(event)
     }
@@ -44,6 +44,7 @@ class MetroClientStorage private constructor() {
         val type: StationEventType,
         val stationId: Int,
         val stationName: String,
+        val announcementStationId: Int? = stationId,
     )
 
     companion object {

@@ -1,30 +1,29 @@
 package com.bleudev.simplemetro.announcement
 
+import com.bleudev.simplemetro.compat.ModCompat
+import net.minecraft.server.level.ServerPlayer
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 object AnnouncementTransportState {
-    private val voicechatPlayers = ConcurrentHashMap.newKeySet<UUID>()
+    private val SVCPlayers = ConcurrentHashMap.newKeySet<UUID>()
 
-    @Volatile
-    var voicechatAvailable: Boolean = false
-        private set
-
-    fun setVoicechatAvailable(available: Boolean) {
-        voicechatAvailable = available
-        if (!available) voicechatPlayers.clear()
+    fun updateSVCPlayers(players: Collection<UUID>) {
+        if (!ModCompat.SVC.present) return
+        SVCPlayers.clear()
+        SVCPlayers.addAll(players)
     }
 
-    fun updateVoicechatPlayers(players: Collection<UUID>) {
-        if (!voicechatAvailable) return
-        voicechatPlayers.clear()
-        voicechatPlayers.addAll(players)
-    }
+    fun canPlayFor(playerId: UUID): Boolean = ModCompat.SVC.present && playerId in SVCPlayers
 
-    fun canPlayFor(playerId: UUID): Boolean = voicechatAvailable && playerId in voicechatPlayers
+    fun playWithSVC(player: ServerPlayer, announcementId: String): Boolean {
+        if (!canPlayFor(player.uuid)) return false
+        if (!ModCompat.SVC.present) return false
+        return runCatching { ModCompat.SVC.get().handleAnnouncement(player, announcementId) }.getOrDefault(false)
+    }
 
     fun reset() {
-        voicechatAvailable = false
-        voicechatPlayers.clear()
+        ModCompat.SVC.reset()
+        SVCPlayers.clear()
     }
 }

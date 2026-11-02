@@ -1,13 +1,16 @@
 package com.bleudev.simplemetro
 
+import com.bleudev.simplemetro.announcement.ServerAnnouncementTracker
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
 import net.fabricmc.api.ModInitializer
 import net.minecraft.resources.Identifier
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 class SMetro : ModInitializer {
     override fun onInitialize() {
         SMetroPacketPayloads.initialize()
+        ServerAnnouncementTracker.initialize()
     }
 
     companion object {
@@ -17,6 +20,6 @@ class SMetro : ModInitializer {
             return Identifier.fromNamespaceAndPath(ID, path)
         }
 
-        val LOGGER = LoggerFactory.getLogger("SimpleMetro")
+        val LOGGER: Logger = LoggerFactory.getLogger("SimpleMetro")
     }
 }

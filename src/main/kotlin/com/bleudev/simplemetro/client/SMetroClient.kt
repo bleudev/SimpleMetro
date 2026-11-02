@@ -1,13 +1,14 @@
 package com.bleudev.simplemetro.client
 
 import com.bleudev.simplemetro.SMetro
-import com.bleudev.simplemetro.announcement.StationAnnouncementClient
+import com.bleudev.simplemetro.announcement.client.StationAnnouncementClient
 import com.bleudev.simplemetro.client.render.LinePanelRenderer
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundMetroInfoSync
+import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundStationAnnouncement
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.i.IPacketCompanion
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.api.EnvType
@@ -26,7 +27,6 @@ import net.minecraft.world.level.storage.LevelResource
 class SMetroClient : ClientModInitializer {
     override fun onInitializeClient() {
         SMetroPacketPayloads.initializeClient()
-        StationAnnouncementClient.initialize()
 
         ClientPlayConnectionEvents.JOIN.register { l, _, mc ->
             val sd = l.serverData
@@ -39,11 +39,6 @@ class SMetroClient : ClientModInitializer {
             }
             val dimensions = SMetroInfo.getInstances()
             MetroSchemeExtractor.rebuild(dimensions)
-            StationAnnouncementClient.update(dimensions)
-        }
-
-        ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
-            StationAnnouncementClient.onDisconnect()
         }
 
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, context ->
@@ -52,8 +47,10 @@ class SMetroClient : ClientModInitializer {
 
         listen(ClientboundMetroInfoSync) {
             SMetroInfo.endSync(it.dimensionMap)
-            StationAnnouncementClient.update(it.dimensionMap)
-            StationAnnouncementClient.setServerVoicechatAvailable(it.voicechatAnnouncementsAvailable)
+        }
+
+        listen(ClientboundStationAnnouncement) {
+            StationAnnouncementClient.playServer(it.announcementId)
         }
 
         HudElementRegistry.addLast(SMetro.resolve("layer/table")) { e, _ ->

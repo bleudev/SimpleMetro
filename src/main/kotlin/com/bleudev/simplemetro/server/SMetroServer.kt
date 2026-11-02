@@ -31,7 +31,6 @@ class SMetroServer : DedicatedServerModInitializer {
                 player.sendPacket(
                     ClientboundMetroInfoSync(
                         dimensions,
-                        AnnouncementTransportState.canPlayFor(player.uuid),
                     ),
                 )
             }

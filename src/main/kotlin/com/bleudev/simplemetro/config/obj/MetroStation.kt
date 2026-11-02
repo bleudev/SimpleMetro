@@ -12,9 +12,28 @@ import net.minecraft.network.codec.ByteBufCodecs
 import net.minecraft.network.codec.StreamCodec
 import net.minecraft.util.StringRepresentable
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
 
 @Serializable
-data class MetroStation(val id: Int, var pos: BlockPos, var name: String, var transfers: List<Int> = listOf(), var status: Status = Status.OPEN, var arrivalAnnouncement: String? = null, var departureAnnouncement: String? = null) {
+data class MetroStation(val id: Int, var pos: BlockPos, var name: String, var transfers: List<Int> = listOf(), var status: Status = Status.OPEN, var announcements: Announcements = Announcements()) {
+    @Serializable
+    data class Announcements(var arrival: String? = null, var departure: String? = null) {
+        constructor(arrival: Optional<String>, departure: Optional<String>) : this(arrival.getOrNull(), departure.getOrNull())
+
+        companion object {
+            private val OPTIONAL_STRING_CODEC = ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs::optional)
+            private fun <T : Any> optionalGetter(getter: (Announcements) -> T?): (Announcements) -> Optional<T> {
+                return { Optional.ofNullable(getter(it)) }
+            }
+
+            val STREAM_CODEC: StreamCodec<RegistryFriendlyByteBuf, Announcements> = StreamCodec.composite(
+                OPTIONAL_STRING_CODEC, optionalGetter(Announcements::arrival),
+                OPTIONAL_STRING_CODEC, optionalGetter(Announcements::departure),
+                ::Announcements
+            )
+        }
+    }
+
     @Serializable(StationStatusSerializer::class)
     enum class Status(val message: Component? = null) : StringRepresentable {
         OPEN,
@@ -42,26 +61,14 @@ data class MetroStation(val id: Int, var pos: BlockPos, var name: String, var tr
     }
 
     companion object {
-        private val OPTIONAL_STRING_CODEC = ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs::optional)
-
         val STREAM_CODEC: StreamCodec<RegistryFriendlyByteBuf, MetroStation> = StreamCodec.composite(
             ByteBufCodecs.INT, MetroStation::id,
             BlockPos.STREAM_CODEC, MetroStation::pos,
             ByteBufCodecs.STRING_UTF8, MetroStation::name,
             ByteBufCodecs.list<ByteBuf, Int>().apply(ByteBufCodecs.INT), MetroStation::transfers,
             Status.STREAM_CODEC, MetroStation::status,
-            OPTIONAL_STRING_CODEC, { Optional.ofNullable(it.arrivalAnnouncement) },
-            OPTIONAL_STRING_CODEC, { Optional.ofNullable(it.departureAnnouncement) },
-        ) { id, pos, name, transfers, status, arrivalAnnouncement, departureAnnouncement ->
-            MetroStation(
-                id,
-                pos,
-                name,
-                transfers,
-                status,
-                arrivalAnnouncement.orElse(null),
-                departureAnnouncement.orElse(null),
-            )
-        }
+            Announcements.STREAM_CODEC, MetroStation::announcements,
+            ::MetroStation
+        )
     }
 }

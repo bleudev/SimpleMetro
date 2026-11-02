@@ -23,7 +23,7 @@
       "com.bleudev.simplemetro.SMetro"
     ],
     "voicechat": [
-      "com.bleudev.simplemetro.voicechat.VoicechatSMetroPlugin"
+      "com.bleudev.simplemetro.compat.svc.SVCPlugin"
     ]
   },
   "mixins": [
