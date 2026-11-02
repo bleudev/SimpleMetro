@@ -1,5 +1,6 @@
 package com.bleudev.simplemetro.server
 
+import com.bleudev.simplemetro.announcement.AnnouncementTransportState
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundMetroInfoSync
@@ -20,11 +21,20 @@ class SMetroServer : DedicatedServerModInitializer {
         ServerLifecycleEvents.SERVER_STARTED.register { server ->
             SMetroInfo.serverInit(server)
         }
+        ServerLifecycleEvents.SERVER_STOPPED.register {
+            AnnouncementTransportState.reset()
+        }
 
         ServerTickEvents.END_SERVER_TICK.register { server ->
-            // Syncing
-            val p = ClientboundMetroInfoSync(SMetroInfo.getInstances())
-            for (player in server.playerList.players) player.sendPacket(p)
+            val dimensions = SMetroInfo.getInstances()
+            for (player in server.playerList.players) {
+                player.sendPacket(
+                    ClientboundMetroInfoSync(
+                        dimensions,
+                        AnnouncementTransportState.canPlayFor(player.uuid),
+                    ),
+                )
+            }
         }
 
         listen(ServerboundMetroInfoEdit) { payload, ctx ->

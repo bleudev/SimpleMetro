@@ -30,6 +30,7 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
         private val JSON = Json { encodeDefaults = true; ignoreUnknownKeys = true; isLenient = true; prettyPrint = true }
 
         private var basePath: Path = FabricLoader.getInstance().configDir.resolve(SMetro.ID)
+        val announcementsDirectory: Path get() = basePath.resolve("announcements")
         private fun pathOf(dimension: Identifier): Path = basePath.resolve(dimension.namespace).resolve("${dimension.path}.json")
 
         private var instance: SMetroInfo? = null

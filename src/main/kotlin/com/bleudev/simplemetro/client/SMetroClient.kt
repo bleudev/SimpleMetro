@@ -1,6 +1,7 @@
 package com.bleudev.simplemetro.client
 
 import com.bleudev.simplemetro.SMetro
+import com.bleudev.simplemetro.announcement.StationAnnouncementClient
 import com.bleudev.simplemetro.client.render.LinePanelRenderer
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
@@ -25,6 +26,7 @@ import net.minecraft.world.level.storage.LevelResource
 class SMetroClient : ClientModInitializer {
     override fun onInitializeClient() {
         SMetroPacketPayloads.initializeClient()
+        StationAnnouncementClient.initialize()
 
         ClientPlayConnectionEvents.JOIN.register { l, _, mc ->
             val sd = l.serverData
@@ -35,7 +37,13 @@ class SMetroClient : ClientModInitializer {
             else if (sd != null) {
                 SMetroInfo.clientInit(FabricLoader.getInstance().configDir.resolve(SMetro.ID, sd.ip))
             }
-            MetroSchemeExtractor.rebuild(SMetroInfo.getInstances())
+            val dimensions = SMetroInfo.getInstances()
+            MetroSchemeExtractor.rebuild(dimensions)
+            StationAnnouncementClient.update(dimensions)
+        }
+
+        ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
+            StationAnnouncementClient.onDisconnect()
         }
 
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, context ->
@@ -44,6 +52,8 @@ class SMetroClient : ClientModInitializer {
 
         listen(ClientboundMetroInfoSync) {
             SMetroInfo.endSync(it.dimensionMap)
+            StationAnnouncementClient.update(it.dimensionMap)
+            StationAnnouncementClient.setServerVoicechatAvailable(it.voicechatAnnouncementsAvailable)
         }
 
         HudElementRegistry.addLast(SMetro.resolve("layer/table")) { e, _ ->
@@ -53,7 +63,12 @@ class SMetroClient : ClientModInitializer {
         ClientTickEvents.END_LEVEL_TICK.register { level ->
             val player = Minecraft.getInstance().player
             if (player != null) {
-                MetroClientStorage.getInstance().onPlayerTick(player, level)
+                val storage = MetroClientStorage.getInstance()
+                storage.onPlayerTick(player, level)
+                while (true) {
+                    val event = storage.pollSoundEvent() ?: break
+                    StationAnnouncementClient.play(level.dimension().identifier(), event)
+                }
             }
         }
     }
