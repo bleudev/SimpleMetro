@@ -394,8 +394,6 @@ object MClientCommand {
 
     private fun announcementsCommand(station: Boolean): LiteralArgumentBuilder<FabricClientCommandSource> {
         val command = ClientCommands.literal("announcements")
-        val context = SuggestionContext.get()
-
         for ((name, setter) in Announcements.SETTERS) {
              command.then(ClientCommands.literal(name)
                  .then(announcementFileArgument()
@@ -403,7 +401,7 @@ object MClientCommand {
                         val id = IntegerArgumentType.getInteger(ctx, "id")
                         val file = StringArgumentType.getString(ctx, "file")
 
-                        if (file !in context.announcementIds) {
+                        if (file !in SuggestionContext.get().announcementIds) {
                             ctx.source.sendError(Component.translatable("commands.metro.generic.announcement.id.error.unknown"))
                             return@executes -1
                         }
