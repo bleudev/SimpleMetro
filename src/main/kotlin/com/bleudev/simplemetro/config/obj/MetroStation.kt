@@ -31,6 +31,11 @@ data class MetroStation(val id: Int, var pos: BlockPos, var name: String, var tr
                 OPTIONAL_STRING_CODEC, optionalGetter(Announcements::departure),
                 ::Announcements
             )
+
+            val SETTERS: Map<String, (Announcements, String?) -> Unit> = mapOf(
+                "arrival" to Announcements::arrival::set,
+                "departure" to Announcements::departure::set,
+            )
         }
     }
 

@@ -5,8 +5,8 @@ import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.obj.MetroLine
 import com.bleudev.simplemetro.config.obj.MetroStation
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ServerboundMetroInfoEdit
-import com.bleudev.simplemetro.util.idModOnServer
 import com.bleudev.simplemetro.util.isClientSide
+import com.bleudev.simplemetro.util.isModOnServer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import net.fabricmc.api.EnvType
@@ -74,7 +74,7 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
         }
 
         fun getInstance(dimension: Identifier): SMetroInfo {
-            return if (isClientSide && idModOnServer) {
+            return if (isClientSide && isModOnServer) {
                 syncedDimensionMap[dimension] ?: SMetroInfo()
             } else {
                 load(dimension)
@@ -82,12 +82,12 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
         }
 
         fun getInstances(): Map<Identifier, SMetroInfo> {
-            return if (isClientSide && idModOnServer) syncedDimensionMap
+            return if (isClientSide && isModOnServer) syncedDimensionMap
             else collectDimensions().associateWith { load(it) }
         }
 
         fun save(dimension: Identifier, info: SMetroInfo) {
-            if (isClientSide && idModOnServer) {
+            if (isClientSide && isModOnServer) {
                 ClientPlayNetworking.send(ServerboundMetroInfoEdit(dimension, info))
             } else {
                 internalSave(dimension, info)

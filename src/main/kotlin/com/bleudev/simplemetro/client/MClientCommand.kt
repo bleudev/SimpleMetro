@@ -3,13 +3,16 @@ package com.bleudev.simplemetro.client
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.config.obj.MetroLine
 import com.bleudev.simplemetro.config.obj.MetroStation
-import com.bleudev.simplemetro.util.idModOnServer
+import com.bleudev.simplemetro.util.SuggestionContext
+import com.bleudev.simplemetro.util.isModOnServer
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.Message
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.builder.RequiredArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
+import com.mojang.brigadier.suggestion.SuggestionsBuilder
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands
@@ -42,7 +45,7 @@ object MClientCommand {
         context: CommandBuildContext
     ): LiteralArgumentBuilder<FabricClientCommandSource> {
         return current
-            .requires { !idModOnServer || it.permissions().hasPermission(Permissions.COMMANDS_ADMIN) }
+            .requires { !isModOnServer || it.permissions().hasPermission(Permissions.COMMANDS_ADMIN) }
             .then(ClientCommands
                 .literal("station")
                 .then(ClientCommands
@@ -123,8 +126,8 @@ object MClientCommand {
                             .suggests { _, b ->
                                 for (status in MetroStation.Status.entries) {
                                     val s = status.serializedName
-                                    if (!status.unknown && s.startsWith(b.remainingLowerCase)) {
-                                        b.suggest(s)
+                                    if (!status.unknown) {
+                                        b.smartSuggest(s)
                                     }
                                 }
                                 b.buildFuture()
@@ -172,7 +175,6 @@ object MClientCommand {
                             }
                         )
                     )
-
                     .then(ClientCommands
                         .literal("place")
                         .then(lineIdArgument("line")
@@ -305,6 +307,7 @@ object MClientCommand {
                             )
                         )
                     )
+                    .then(announcementsCommand())
                 )
             )
             .then(ClientCommands
@@ -387,14 +390,65 @@ object MClientCommand {
             )
     }
 
+    private fun announcementsCommand(): LiteralArgumentBuilder<FabricClientCommandSource> {
+        val command = ClientCommands.literal("announcements")
+
+        for ((name, setter) in MetroStation.Announcements.SETTERS) {
+             command.then(ClientCommands.literal(name)
+                 .then(announcementFileArgument()
+                    .executes { ctx ->
+                        return@executes updateStation(IntegerArgumentType.getInteger(ctx, "id")) {
+                            val a = it.announcements
+                            setter(a, StringArgumentType.getString(ctx, "file"))
+                            it.announcements = a
+                            it
+                        }.also {
+                            if (it == 1) {
+                                ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
+                            } else {
+                                ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown"))
+                            }
+                        }
+                    }
+                )
+                 .then(ClientCommands.literal("reset")
+                     .executes { ctx ->
+                         return@executes updateStation(IntegerArgumentType.getInteger(ctx, "id")) {
+                             val a = it.announcements
+                             setter(a, null)
+                             it.announcements = a
+                             it
+                         }.also {
+                             if (it == 1) {
+                                 ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
+                             } else {
+                                 ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown"))
+                             }
+                         }
+                     }
+                 )
+             )
+        }
+
+        return command
+    }
+
+    private fun announcementFileArgument(): RequiredArgumentBuilder<FabricClientCommandSource, String> {
+        return ClientCommands.argument("file", StringArgumentType.word())
+            .suggests { _, builder ->
+                for (id in SuggestionContext.get().announcementIds) {
+                    builder.smartSuggest(id)
+                }
+                builder.buildFuture()
+            }
+    }
+
     private fun stationIdArgument(name: String): RequiredArgumentBuilder<FabricClientCommandSource, Int> {
         return ClientCommands
             .argument(name, IntegerArgumentType.integer(1))
             .suggests { _, builder ->
                 SMetroInfo.getInstance(dim).stations.forEach { station ->
-                    if (station.id.toString().startsWith(builder.remainingLowerCase)) {
-                        builder.suggest(station.id, Component.literal(station.name))
-                    }
+                    builder.smartSuggest(station.id, Component.literal(station.name))
                 }
                 builder.buildFuture()
             }
@@ -404,9 +458,7 @@ object MClientCommand {
             .argument(name, IntegerArgumentType.integer(1))
             .suggests { _, builder ->
                 SMetroInfo.getInstance(dim).lines.forEach { line ->
-                    if (line.id.toString().startsWith(builder.remainingLowerCase)) {
-                        builder.suggest(line.id, Component.literal(line.name).withColor(ARGB.color(1f, line.color)))
-                    }
+                    builder.smartSuggest(line.id, Component.literal(line.name).withColor(ARGB.color(1f, line.color)))
                 }
                 builder.buildFuture()
             }
@@ -593,5 +645,16 @@ object MClientCommand {
             else -> error("Coordinates is neither WorldCoordinates nor LocalCoordinates.")
         }
         return BlockPos.containing(almostAns)
+    }
+
+    private fun SuggestionsBuilder.smartSuggest(suggestion: String, tooltip: Message? = null) {
+        if (suggestion.startsWith(remainingLowerCase)) {
+            if (tooltip == null) suggest(suggestion) else suggest(suggestion, tooltip)
+        }
+    }
+    private fun SuggestionsBuilder.smartSuggest(suggestion: Int, tooltip: Message? = null) {
+        if (suggestion.toString().startsWith(remainingLowerCase)) {
+            if (tooltip == null) suggest(suggestion) else suggest(suggestion, tooltip)
+        }
     }
 }

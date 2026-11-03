@@ -4,7 +4,7 @@ import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.announcement.AnnouncementId
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.config.SMetroInfo
-import com.bleudev.simplemetro.util.idModOnServer
+import com.bleudev.simplemetro.util.isModOnServer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.Minecraft
@@ -22,7 +22,7 @@ object StationAnnouncementClient {
         playFile(announcementId)
     }
 
-    private fun shouldPlayLocally(): Boolean = !idModOnServer
+    private fun shouldPlayLocally(): Boolean = !isModOnServer
 
     private fun playNow(dimension: Identifier, event: MetroClientStorage.StationEvent) {
         val stationId = when (event.type) {

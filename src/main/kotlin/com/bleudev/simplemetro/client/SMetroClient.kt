@@ -9,7 +9,9 @@ import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundMetroInfoSync
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundStationAnnouncement
+import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundSuggestionContextSync
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.i.IPacketCompanion
+import com.bleudev.simplemetro.util.SuggestionContext
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
@@ -43,6 +45,10 @@ class SMetroClient : ClientModInitializer {
 
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, context ->
             MClientCommand.register(dispatcher, context)
+        }
+
+        listen(ClientboundSuggestionContextSync) {
+            SuggestionContext.sync(it.context)
         }
 
         listen(ClientboundMetroInfoSync) {
