@@ -1,7 +1,6 @@
 package com.bleudev.simplemetro.announcement.client
 
 import com.bleudev.simplemetro.SMetro
-import com.bleudev.simplemetro.announcement.AnnouncementId
 import com.bleudev.simplemetro.announcement.AnnouncementResolver
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.config.SMetroInfo
@@ -34,12 +33,11 @@ object StationAnnouncementClient {
     private fun shouldPlayLocally(): Boolean = !isModOnServer
 
     private fun playFiles(announcementIds: List<String>) {
-        if (announcementIds.firstOrNull()?.let(AnnouncementId::isValid) != true) return
+        if (announcementIds.isEmpty()) return
 
         val directory = SMetroInfo.announcementsDirectory.toAbsolutePath().normalize()
         val paths = ArrayList<Path>(announcementIds.size)
         for ((index, announcementId) in announcementIds.withIndex()) {
-            if (!AnnouncementId.isValid(announcementId)) continue
             val file = directory.resolve("$announcementId.wav").normalize()
             if (file.parent != directory || !Files.isRegularFile(file)) {
                 SMetro.LOGGER.debug("Station announcement WAV is missing on the client: {}", file)

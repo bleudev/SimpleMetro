@@ -458,7 +458,7 @@ object MClientCommand {
     }
 
     private fun announcementFileArgument(): RequiredArgumentBuilder<FabricClientCommandSource, String> {
-        return ClientCommands.argument("file", StringArgumentType.word())
+        return ClientCommands.argument("file", StringArgumentType.greedyString())
             .suggests { _, builder ->
                 for (id in SuggestionContext.get().announcementIds) {
                     builder.smartSuggest(id)
@@ -672,7 +672,7 @@ object MClientCommand {
     }
 
     private fun SuggestionsBuilder.smartSuggest(suggestion: String, tooltip: Message? = null) {
-        if (suggestion.startsWith(remainingLowerCase)) {
+        if (suggestion.lowercase().startsWith(remainingLowerCase)) {
             if (tooltip == null) suggest(suggestion) else suggest(suggestion, tooltip)
         }
     }

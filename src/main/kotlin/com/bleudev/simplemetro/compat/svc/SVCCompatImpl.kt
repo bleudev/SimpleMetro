@@ -1,7 +1,6 @@
 package com.bleudev.simplemetro.compat.svc
 
 import com.bleudev.simplemetro.SMetro
-import com.bleudev.simplemetro.announcement.AnnouncementId
 import com.bleudev.simplemetro.compat.SVCCompat
 import com.bleudev.simplemetro.config.SMetroInfo
 import de.maxhenkel.voicechat.api.VoicechatServerApi
@@ -66,7 +65,7 @@ class SVCCompatImpl(private val serverApi: VoicechatServerApi) : SVCCompat {
         player: ServerPlayer,
         announcementIds: List<String>,
     ): Boolean {
-        if (announcementIds.isEmpty() || announcementIds.any { !AnnouncementId.isValid(it) }) return false
+        if (announcementIds.isEmpty()) return false
 
         val directory = SMetroInfo.announcementsDirectory.toAbsolutePath().normalize()
         val parts = ArrayList<ShortArray>(announcementIds.size)
