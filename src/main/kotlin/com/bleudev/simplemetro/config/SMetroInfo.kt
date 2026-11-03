@@ -39,6 +39,9 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
 
         private fun load(dim: Identifier, s: String): SMetroInfo {
             var s = s
+            if (!Files.exists(announcementsDirectory)) {
+                Files.createDirectories(announcementsDirectory)
+            }
             if (!Files.exists(pathOf(dim))) {
                 Files.createDirectories(pathOf(dim).parent)
                 s = JSON.encodeToString(SMetroInfo())
