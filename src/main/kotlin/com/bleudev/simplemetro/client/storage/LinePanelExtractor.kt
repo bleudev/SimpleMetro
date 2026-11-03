@@ -85,9 +85,10 @@ class LinePanelExtractor private constructor() {
                             activePath?.direction,
                         )?.nextStationId
                         storage.publishStationEvent(
-                            MetroClientStorage.StationEventType.DEPARTURE,
+                            MetroClientStorage.AnnouncementType.DEPARTURE,
                             station.id,
                             station.name,
+                            activePath?.lineId ?: storage.currentLine,
                             nextStationId,
                         )
                     }
@@ -97,9 +98,10 @@ class LinePanelExtractor private constructor() {
                 stationsById[current]?.let { station ->
                     if (!station.status.invisible) {
                         storage.publishStationEvent(
-                            MetroClientStorage.StationEventType.ARRIVAL,
+                            MetroClientStorage.AnnouncementType.ARRIVAL,
                             station.id,
                             station.name,
+                            activePath?.lineId ?: storage.currentLine,
                         )
                     }
                 }

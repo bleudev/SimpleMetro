@@ -2,6 +2,7 @@ package com.bleudev.simplemetro.announcement
 
 import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.config.SMetroInfo
+import com.bleudev.simplemetro.config.obj.Announcements
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundStationAnnouncement
 import com.bleudev.simplemetro.util.sendPacket
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
@@ -71,9 +72,8 @@ object ServerAnnouncementTracker {
                 route?.nextStationId,
             )
             if (current != null) {
-                info.stations.firstOrNull { it.id == current }?.announcements?.arrival?.let {
-                    broadcast(player, dimension, it)
-                }
+                val lineId = states[player.uuid]?.lineId
+                tryBroadcast(player, info, dimension, current, lineId, Announcements.AnnouncementType.ARRIVAL)
             }
             return
         }
@@ -92,18 +92,17 @@ object ServerAnnouncementTracker {
                         previous.lineId,
                         previous.direction,
                     )
+                    val lineId = route?.lineId ?: previous.lineId
                     val targetStationId = route?.nextStationId ?: previous.nextStationId
                     targetStationId?.let { nextId ->
-                        info.stations.firstOrNull { it.id == nextId }?.announcements?.departure?.let {
-                            broadcast(player, dimension, it)
-                        }
+                        tryBroadcast(player, info, dimension, nextId, lineId, Announcements.AnnouncementType.DEPARTURE)
                     }
 
                     states[player.uuid] = PlayerState(
                         dimension,
                         null,
                         position,
-                        route?.lineId ?: previous.lineId,
+                        lineId,
                         route?.direction ?: previous.direction,
                         route?.nextStationId ?: previous.nextStationId,
                     )
@@ -111,9 +110,8 @@ object ServerAnnouncementTracker {
                 }
 
                 current != null -> {
-                    info.stations.firstOrNull { it.id == current }?.announcements?.arrival?.let {
-                        broadcast(player, dimension, it)
-                    }
+                    val lineId = states[player.uuid]?.lineId
+                    tryBroadcast(player, info, dimension, current, lineId, Announcements.AnnouncementType.ARRIVAL)
                 }
             }
         }
@@ -129,6 +127,17 @@ object ServerAnnouncementTracker {
             route?.direction ?: previous.direction,
             route?.nextStationId ?: previous.nextStationId,
         )
+    }
+
+    private fun tryBroadcast(player: ServerPlayer, info: SMetroInfo, dimension: Identifier, stationId: Int, lineId: Int?, type: Announcements.AnnouncementType) {
+        var id = info.stations.firstOrNull { it.id == stationId }?.announcements?.get(type)
+        if (id == null && lineId != null) {
+            id = info.lines.firstOrNull { it.id == lineId }?.announcements?.get(type)
+        }
+
+        if (id != null) {
+            broadcast(player, dimension, id)
+        }
     }
 
     private fun broadcast(player: ServerPlayer, dimension: Identifier, announcementId: String) {

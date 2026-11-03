@@ -410,10 +410,10 @@ internal object LinePanelRenderer {
         while (true) {
             val event = storage.pollStationEvent() ?: break
             when (event.type) {
-                MetroClientStorage.StationEventType.ARRIVAL -> {
+                MetroClientStorage.AnnouncementType.ARRIVAL -> {
                     activeToast = ActiveToast(event, nowMs)
                 }
-                MetroClientStorage.StationEventType.DEPARTURE -> {
+                MetroClientStorage.AnnouncementType.DEPARTURE -> {
                     departureEvent = true
                     activeToast?.let { toast ->
                         if (toast.fadeOutStartedAtMs == null) {

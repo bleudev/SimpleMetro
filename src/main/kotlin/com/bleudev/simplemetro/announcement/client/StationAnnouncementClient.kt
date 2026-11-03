@@ -26,14 +26,15 @@ object StationAnnouncementClient {
 
     private fun playNow(dimension: Identifier, event: MetroClientStorage.StationEvent) {
         val stationId = when (event.type) {
-            MetroClientStorage.StationEventType.ARRIVAL -> event.stationId
-            MetroClientStorage.StationEventType.DEPARTURE -> event.announcementStationId
+            MetroClientStorage.AnnouncementType.ARRIVAL -> event.stationId
+            MetroClientStorage.AnnouncementType.DEPARTURE -> event.announcementStationId
         } ?: return
         val station = SMetroInfo.getInstance(dimension).stations.firstOrNull { it.id == stationId } ?: return
-        val announcementId = when (event.type) {
-            MetroClientStorage.StationEventType.ARRIVAL -> station.announcements.arrival
-            MetroClientStorage.StationEventType.DEPARTURE -> station.announcements.departure
-        } ?: return
+        var announcementId = station.announcements.get(event.type)
+        if (announcementId == null) {
+            val line = SMetroInfo.getInstance(dimension).lines.firstOrNull { it.id == event.lineId } ?: return
+            announcementId = line.announcements.get(event.type) ?: return
+        }
         playFile(announcementId)
     }
 

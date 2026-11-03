@@ -1,6 +1,7 @@
 package com.bleudev.simplemetro.client
 
 import com.bleudev.simplemetro.config.SMetroInfo
+import com.bleudev.simplemetro.config.obj.Announcements
 import com.bleudev.simplemetro.config.obj.MetroLine
 import com.bleudev.simplemetro.config.obj.MetroStation
 import com.bleudev.simplemetro.util.SuggestionContext
@@ -307,7 +308,7 @@ object MClientCommand {
                             )
                         )
                     )
-                    .then(announcementsCommand())
+                    .then(announcementsCommand(true))
                 )
             )
             .then(ClientCommands
@@ -386,27 +387,43 @@ object MClientCommand {
                             }
                         )
                     )
+                    .then(announcementsCommand(false))
                 )
             )
     }
 
-    private fun announcementsCommand(): LiteralArgumentBuilder<FabricClientCommandSource> {
+    private fun announcementsCommand(station: Boolean): LiteralArgumentBuilder<FabricClientCommandSource> {
         val command = ClientCommands.literal("announcements")
 
-        for ((name, setter) in MetroStation.Announcements.SETTERS) {
+        for ((name, setter) in Announcements.SETTERS) {
              command.then(ClientCommands.literal(name)
                  .then(announcementFileArgument()
                     .executes { ctx ->
-                        return@executes updateStation(IntegerArgumentType.getInteger(ctx, "id")) {
-                            val a = it.announcements
-                            setter(a, StringArgumentType.getString(ctx, "file"))
-                            it.announcements = a
-                            it
-                        }.also {
-                            if (it == 1) {
-                                ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
-                            } else {
-                                ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown"))
+                        if (station) {
+                            return@executes updateStation(IntegerArgumentType.getInteger(ctx, "id")) {
+                                val a = it.announcements
+                                setter(a, StringArgumentType.getString(ctx, "file"))
+                                it.announcements = a
+                                it
+                            }.also {
+                                if (it == 1) {
+                                    ctx.source.sendFeedback(Component.translatable("commands.metro.station.update.success"))
+                                } else {
+                                    ctx.source.sendError(Component.translatable("commands.metro.generic.station.unknown"))
+                                }
+                            }
+                        } else {
+                            return@executes addOrUpdateLine(IntegerArgumentType.getInteger(ctx, "id")) {
+                                val a = it.announcements
+                                setter(a, StringArgumentType.getString(ctx, "file"))
+                                it.announcements = a
+                                it
+                            }.also {
+                                if (it == 1) {
+                                    ctx.source.sendFeedback(Component.translatable("commands.metro.line.success.updated"))
+                                } else {
+                                    ctx.source.sendFeedback(Component.translatable("commands.metro.line.success.new"))
+                                }
                             }
                         }
                     }
