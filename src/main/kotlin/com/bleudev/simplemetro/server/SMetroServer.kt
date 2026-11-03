@@ -1,6 +1,7 @@
 package com.bleudev.simplemetro.server
 
 import com.bleudev.simplemetro.announcement.AnnouncementTransportState
+import com.bleudev.simplemetro.announcement.ServerAnnouncementTracker
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundMetroInfoSync
@@ -19,6 +20,7 @@ import net.minecraft.server.permissions.Permissions
 class SMetroServer : DedicatedServerModInitializer {
     override fun onInitializeServer() {
         SMetroPacketPayloads.initializeServer()
+        ServerAnnouncementTracker.initialize()
 
         ServerLifecycleEvents.SERVER_STARTED.register { server ->
             SMetroInfo.serverInit(server)
