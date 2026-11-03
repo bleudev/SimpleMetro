@@ -1,10 +1,14 @@
 package com.bleudev.simplemetro.server
 
+import com.bleudev.simplemetro.announcement.AnnouncementTransportState
+import com.bleudev.simplemetro.announcement.ServerAnnouncementTracker
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundMetroInfoSync
+import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundSuggestionContextSync
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ServerboundMetroInfoEdit
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.i.IPacketCompanion
+import com.bleudev.simplemetro.util.SuggestionContext
 import com.bleudev.simplemetro.util.sendPacket
 import net.fabricmc.api.DedicatedServerModInitializer
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
@@ -16,15 +20,23 @@ import net.minecraft.server.permissions.Permissions
 class SMetroServer : DedicatedServerModInitializer {
     override fun onInitializeServer() {
         SMetroPacketPayloads.initializeServer()
+        ServerAnnouncementTracker.initialize()
 
         ServerLifecycleEvents.SERVER_STARTED.register { server ->
             SMetroInfo.serverInit(server)
         }
+        ServerLifecycleEvents.SERVER_STOPPED.register {
+            AnnouncementTransportState.reset()
+        }
 
         ServerTickEvents.END_SERVER_TICK.register { server ->
-            // Syncing
-            val p = ClientboundMetroInfoSync(SMetroInfo.getInstances())
-            for (player in server.playerList.players) player.sendPacket(p)
+            val dimensions = SMetroInfo.getInstances()
+            val suggestionContext = SuggestionContext.create()
+            for (player in server.playerList.players) {
+                // Syncing
+                player.sendPacket(ClientboundMetroInfoSync(dimensions))
+                player.sendPacket(ClientboundSuggestionContextSync(suggestionContext))
+            }
         }
 
         listen(ServerboundMetroInfoEdit) { payload, ctx ->

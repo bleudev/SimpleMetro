@@ -1,13 +1,17 @@
 package com.bleudev.simplemetro.client
 
 import com.bleudev.simplemetro.SMetro
+import com.bleudev.simplemetro.announcement.client.StationAnnouncementClient
 import com.bleudev.simplemetro.client.render.LinePanelRenderer
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundMetroInfoSync
+import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundStationAnnouncement
+import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundSuggestionContextSync
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.i.IPacketCompanion
+import com.bleudev.simplemetro.util.SuggestionContext
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
@@ -35,15 +39,24 @@ class SMetroClient : ClientModInitializer {
             else if (sd != null) {
                 SMetroInfo.clientInit(FabricLoader.getInstance().configDir.resolve(SMetro.ID, sd.ip))
             }
-            MetroSchemeExtractor.rebuild(SMetroInfo.getInstances())
+            val dimensions = SMetroInfo.getInstances()
+            MetroSchemeExtractor.rebuild(dimensions)
         }
 
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, context ->
             MClientCommand.register(dispatcher, context)
         }
 
+        listen(ClientboundSuggestionContextSync) {
+            SuggestionContext.sync(it.context)
+        }
+
         listen(ClientboundMetroInfoSync) {
             SMetroInfo.endSync(it.dimensionMap)
+        }
+
+        listen(ClientboundStationAnnouncement) {
+            StationAnnouncementClient.playServer(it.announcementIds)
         }
 
         HudElementRegistry.addLast(SMetro.resolve("layer/table")) { e, _ ->
@@ -53,7 +66,12 @@ class SMetroClient : ClientModInitializer {
         ClientTickEvents.END_LEVEL_TICK.register { level ->
             val player = Minecraft.getInstance().player
             if (player != null) {
-                MetroClientStorage.getInstance().onPlayerTick(player, level)
+                val storage = MetroClientStorage.getInstance()
+                storage.onPlayerTick(player, level)
+                while (true) {
+                    val event = storage.pollSoundEvent() ?: break
+                    StationAnnouncementClient.play(level.dimension().identifier(), event)
+                }
             }
         }
     }

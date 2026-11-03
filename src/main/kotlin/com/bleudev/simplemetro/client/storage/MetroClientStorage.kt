@@ -1,5 +1,6 @@
 package com.bleudev.simplemetro.client.storage
 
+import com.bleudev.simplemetro.config.obj.Announcements
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.multiplayer.ClientLevel
@@ -23,10 +24,10 @@ class MetroClientStorage private constructor() {
         LinePanelExtractor.getInstance().playerTick(this, player, level)
     }
 
-    fun publishStationEvent(type: StationEventType, stationId: Int, stationName: String) {
+    fun publishStationEvent(type: Announcements.AnnouncementType, stationId: Int, stationName: String, lineId: Int?, announcementStationId: Int? = stationId) {
         if (stationEvents.size >= MAX_QUEUED_STATION_EVENTS) stationEvents.removeFirst()
         if (soundEvents.size >= MAX_QUEUED_STATION_EVENTS) soundEvents.removeFirst()
-        val event = StationEvent(++nextEventId, type, stationId, stationName)
+        val event = StationEvent(++nextEventId, type, stationId, stationName, lineId, announcementStationId)
         stationEvents.addLast(event)
         soundEvents.addLast(event)
     }
@@ -34,16 +35,13 @@ class MetroClientStorage private constructor() {
     fun pollStationEvent(): StationEvent? = stationEvents.pollFirst()
     fun pollSoundEvent(): StationEvent? = soundEvents.pollFirst()
 
-    enum class StationEventType {
-        ARRIVAL,
-        DEPARTURE,
-    }
-
     data class StationEvent(
         val id: Long,
-        val type: StationEventType,
+        val type: Announcements.AnnouncementType,
         val stationId: Int,
         val stationName: String,
+        val lineId: Int?,
+        val announcementStationId: Int? = stationId,
     )
 
     companion object {
