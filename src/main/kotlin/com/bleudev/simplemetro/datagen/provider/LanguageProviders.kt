@@ -27,6 +27,7 @@ class SMetroDefaultLanguage(output: FabricPackOutput, registryLookup: Completabl
         builder.add("commands.metro.generic.station.unknown", "Unknown station with id: %d")
         builder.add("commands.metro.generic.error.unknown", "Unknown error with code: %d. Please report this.")
         builder.add("commands.metro.generic.line.unknown", "Unknown line with id: %d")
+        builder.add("commands.metro.generic.announcement.id.error.unknown", "Unknown announcement file!")
 
         builder.add("xaero.map.station.tooltip.status.closed_temp", "(closed temporary)")
         builder.add("xaero.map.station.tooltip.status.closed_repair", "(closed for repair)")
@@ -70,6 +71,7 @@ class SMetroRussianLanguage(output: FabricPackOutput, registryLookup: Completabl
         builder.add("commands.metro.generic.station.unknown", "Станция с айди %d не найдена")
         builder.add("commands.metro.generic.error.unknown", "Неизвестная ошибка с кодом: %d. Пожалуйста, сообщите об этом.")
         builder.add("commands.metro.generic.line.unknown", "Линия с айди %d не найдена")
+        builder.add("commands.metro.generic.announcement.id.error.unknown", "Неизвестный файл оповещения!")
 
         builder.add("xaero.map.station.tooltip.status.closed_temp", "(временно закрыто)")
         builder.add("xaero.map.station.tooltip.status.closed_repair", "(закрыто на ремонт)")
@@ -113,6 +115,7 @@ class SMetroPreReformRussianLanguage(output: FabricPackOutput, registryLookup: C
         builder.add("commands.metro.generic.station.unknown", "Станція №%d не найдена")
         builder.add("commands.metro.generic.error.unknown", "Неизвѣстная ошибка съ кодомъ %d. Пожалуйста, сообщите объ этомъ.")
         builder.add("commands.metro.generic.line.unknown", "Линія №%d не найдена")
+        builder.add("commands.metro.generic.announcement.id.error.unknown", "Неизвѣстный файлъ оповѣщенія!")
 
         builder.add("xaero.map.station.tooltip.status.closed_temp", "(временно закрыта)")
         builder.add("xaero.map.station.tooltip.status.closed_repair", "(закрыта на ремонтъ)")

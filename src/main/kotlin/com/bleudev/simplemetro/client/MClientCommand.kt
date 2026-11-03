@@ -394,15 +394,24 @@ object MClientCommand {
 
     private fun announcementsCommand(station: Boolean): LiteralArgumentBuilder<FabricClientCommandSource> {
         val command = ClientCommands.literal("announcements")
+        val context = SuggestionContext.get()
 
         for ((name, setter) in Announcements.SETTERS) {
              command.then(ClientCommands.literal(name)
-                 .then(announcementFileArgument()
+                 .then(announcementFileArgument(context)
                     .executes { ctx ->
+                        val id = IntegerArgumentType.getInteger(ctx, "id")
+                        val file = StringArgumentType.getString(ctx, "file")
+
+                        if (file !in context.announcementIds) {
+                            ctx.source.sendError(Component.translatable("commands.metro.generic.announcement.id.error.unknown"))
+                            return@executes -1
+                        }
+
                         if (station) {
-                            return@executes updateStation(IntegerArgumentType.getInteger(ctx, "id")) {
+                            return@executes updateStation(id) {
                                 val a = it.announcements
-                                setter(a, StringArgumentType.getString(ctx, "file"))
+                                setter(a, file)
                                 it.announcements = a
                                 it
                             }.also {
@@ -413,9 +422,9 @@ object MClientCommand {
                                 }
                             }
                         } else {
-                            return@executes addOrUpdateLine(IntegerArgumentType.getInteger(ctx, "id")) {
+                            return@executes addOrUpdateLine(id) {
                                 val a = it.announcements
-                                setter(a, StringArgumentType.getString(ctx, "file"))
+                                setter(a, file)
                                 it.announcements = a
                                 it
                             }.also {
@@ -450,10 +459,10 @@ object MClientCommand {
         return command
     }
 
-    private fun announcementFileArgument(): RequiredArgumentBuilder<FabricClientCommandSource, String> {
+    private fun announcementFileArgument(context: SuggestionContext): RequiredArgumentBuilder<FabricClientCommandSource, String> {
         return ClientCommands.argument("file", StringArgumentType.word())
             .suggests { _, builder ->
-                for (id in SuggestionContext.get().announcementIds) {
+                for (id in context.announcementIds) {
                     builder.smartSuggest(id)
                 }
                 builder.buildFuture()
