@@ -4,6 +4,7 @@ import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.announcement.AnnouncementId
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.config.SMetroInfo
+import com.bleudev.simplemetro.config.obj.Announcements
 import com.bleudev.simplemetro.util.isModOnServer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
@@ -26,8 +27,8 @@ object StationAnnouncementClient {
 
     private fun playNow(dimension: Identifier, event: MetroClientStorage.StationEvent) {
         val stationId = when (event.type) {
-            MetroClientStorage.AnnouncementType.ARRIVAL -> event.stationId
-            MetroClientStorage.AnnouncementType.DEPARTURE -> event.announcementStationId
+            Announcements.AnnouncementType.ARRIVAL -> event.stationId
+            Announcements.AnnouncementType.DEPARTURE -> event.announcementStationId
         } ?: return
         val station = SMetroInfo.getInstance(dimension).stations.firstOrNull { it.id == stationId } ?: return
         var announcementId = station.announcements.get(event.type)

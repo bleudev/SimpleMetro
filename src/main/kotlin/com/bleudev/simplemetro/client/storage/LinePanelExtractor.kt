@@ -2,6 +2,7 @@ package com.bleudev.simplemetro.client.storage
 
 import com.bleudev.simplemetro.announcement.StationRouteResolver
 import com.bleudev.simplemetro.config.SMetroInfo
+import com.bleudev.simplemetro.config.obj.Announcements
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.multiplayer.ClientLevel
@@ -85,7 +86,7 @@ class LinePanelExtractor private constructor() {
                             activePath?.direction,
                         )?.nextStationId
                         storage.publishStationEvent(
-                            MetroClientStorage.AnnouncementType.DEPARTURE,
+                            Announcements.AnnouncementType.DEPARTURE,
                             station.id,
                             station.name,
                             activePath?.lineId ?: storage.currentLine,
@@ -98,7 +99,7 @@ class LinePanelExtractor private constructor() {
                 stationsById[current]?.let { station ->
                     if (!station.status.invisible) {
                         storage.publishStationEvent(
-                            MetroClientStorage.AnnouncementType.ARRIVAL,
+                            Announcements.AnnouncementType.ARRIVAL,
                             station.id,
                             station.name,
                             activePath?.lineId ?: storage.currentLine,
@@ -422,10 +423,6 @@ class LinePanelExtractor private constructor() {
     }
 
     companion object {
-        private const val STATION_ENTER_RADIUS = 7.0
-        private const val STATION_EXIT_RADIUS = 9.0
-        private const val STATION_SWITCH_MARGIN = 1.0
-        private const val STATION_CHECK_HEIGHT = 5.0
         private const val TRACK_CHECK_RADIUS = 7.0
         private const val TRACK_CHECK_HEIGHT = 5.0
         private const val OFF_TRACK_GRACE_TICKS = 8

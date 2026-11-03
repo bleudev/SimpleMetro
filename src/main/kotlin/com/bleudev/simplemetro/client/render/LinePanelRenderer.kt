@@ -4,6 +4,7 @@ import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.SMetroInfo
+import com.bleudev.simplemetro.config.obj.Announcements
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.Minecraft
@@ -410,10 +411,10 @@ internal object LinePanelRenderer {
         while (true) {
             val event = storage.pollStationEvent() ?: break
             when (event.type) {
-                MetroClientStorage.AnnouncementType.ARRIVAL -> {
+                Announcements.AnnouncementType.ARRIVAL -> {
                     activeToast = ActiveToast(event, nowMs)
                 }
-                MetroClientStorage.AnnouncementType.DEPARTURE -> {
+                Announcements.AnnouncementType.DEPARTURE -> {
                     departureEvent = true
                     activeToast?.let { toast ->
                         if (toast.fadeOutStartedAtMs == null) {
