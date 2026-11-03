@@ -56,7 +56,7 @@ class SMetroClient : ClientModInitializer {
         }
 
         listen(ClientboundStationAnnouncement) {
-            StationAnnouncementClient.playServer(it.announcementId)
+            StationAnnouncementClient.playServer(it.announcementIds)
         }
 
         HudElementRegistry.addLast(SMetro.resolve("layer/table")) { e, _ ->

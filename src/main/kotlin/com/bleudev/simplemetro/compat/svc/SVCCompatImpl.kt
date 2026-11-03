@@ -5,6 +5,7 @@ import com.bleudev.simplemetro.announcement.AnnouncementId
 import com.bleudev.simplemetro.compat.SVCCompat
 import com.bleudev.simplemetro.config.SMetroInfo
 import de.maxhenkel.voicechat.api.VoicechatServerApi
+import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer
 import de.maxhenkel.voicechat.api.audiochannel.StaticAudioChannel
 import net.minecraft.server.level.ServerPlayer
 import java.io.IOException
@@ -18,8 +19,13 @@ import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 
 class SVCCompatImpl(private val serverApi: VoicechatServerApi) : SVCCompat {
-    override fun handleAnnouncement(player: ServerPlayer, id: String): Boolean = playById(serverApi, player, id)
-    override fun flushAnnouncementCache() = waveCache.clear()
+    override fun handleAnnouncements(player: ServerPlayer, ids: List<String>): Boolean = playByIds(serverApi, player, ids)
+
+    override fun flushAnnouncementCache() {
+        activePlayers.values.forEach { runCatching { it.stopPlaying() } }
+        activePlayers.clear()
+        waveCache.clear()
+    }
 
     companion object {
         private const val ANNOUNCEMENTS_CATEGORY = "announcements"
@@ -53,26 +59,38 @@ class SVCCompatImpl(private val serverApi: VoicechatServerApi) : SVCCompat {
     }
 
     private val waveCache = ConcurrentHashMap<Path, CachedWave>()
+    private val activePlayers = ConcurrentHashMap<UUID, AudioPlayer>()
 
-    private fun playById(
+    private fun playByIds(
         voicechat: VoicechatServerApi,
         player: ServerPlayer,
-        announcementId: String,
+        announcementIds: List<String>,
     ): Boolean {
-        if (!AnnouncementId.isValid(announcementId)) return false
+        if (announcementIds.isEmpty() || announcementIds.any { !AnnouncementId.isValid(it) }) return false
 
         val directory = SMetroInfo.announcementsDirectory.toAbsolutePath().normalize()
-        val audioFile = directory.resolve("$announcementId.wav").normalize()
-        if (audioFile.parent != directory || !Files.isRegularFile(audioFile)) return false
-
-        val connection = voicechat.getConnectionOf(player.gameProfile.id) ?: return false
-        val samples = try {
-            loadWave(audioFile)
-        } catch (exception: Exception) {
-            SMetro.LOGGER.warn("Could not load station announcement WAV '{}'", audioFile, exception)
-            return false
+        val parts = ArrayList<ShortArray>(announcementIds.size)
+        for (announcementId in announcementIds) {
+            val audioFile = directory.resolve("$announcementId.wav").normalize()
+            if (audioFile.parent != directory || !Files.isRegularFile(audioFile)) return false
+            try {
+                parts.add(loadWave(audioFile))
+            } catch (exception: Exception) {
+                SMetro.LOGGER.warn("Could not load station announcement WAV '{}'", audioFile, exception)
+                return false
+            }
         }
 
+        val sampleCount = parts.sumOf { it.size }
+        if (sampleCount == 0) return false
+        val samples = ShortArray(sampleCount)
+        var sampleOffset = 0
+        for (part in parts) {
+            part.copyInto(samples, sampleOffset)
+            sampleOffset += part.size
+        }
+
+        val connection = voicechat.getConnectionOf(player.gameProfile.id) ?: return false
         val channel: StaticAudioChannel = voicechat.createStaticAudioChannel(UUID.randomUUID()) ?: return false
         channel.addTarget(connection)
         channel.category = ANNOUNCEMENTS_CATEGORY
@@ -85,18 +103,28 @@ class SVCCompatImpl(private val serverApi: VoicechatServerApi) : SVCCompat {
             return false
         }
 
+        var startedPlayer: AudioPlayer? = null
         return try {
             val audioPlayer = voicechat.createAudioPlayer(channel, encoder, samples)
+            startedPlayer = audioPlayer
             audioPlayer.setOnStopped {
+                activePlayers.remove(player.uuid, audioPlayer)
                 runCatching { encoder.close() }
                 channel.clearTargets()
+            }
+            activePlayers.put(player.uuid, audioPlayer)?.let { previous ->
+                runCatching { previous.stopPlaying() }
             }
             audioPlayer.startPlaying()
             true
         } catch (exception: Exception) {
+            SMetro.LOGGER.warn("Could not play station announcement sequence {}", announcementIds, exception)
+            startedPlayer?.let {
+                activePlayers.remove(player.uuid, it)
+                runCatching { it.stopPlaying() }
+            }
             runCatching { encoder.close() }
             channel.clearTargets()
-            SMetro.LOGGER.warn("Could not play station announcement '{}'", announcementId, exception)
             false
         }
     }

@@ -2,6 +2,7 @@ package com.bleudev.simplemetro.announcement.client
 
 import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.announcement.AnnouncementId
+import com.bleudev.simplemetro.announcement.AnnouncementResolver
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.config.obj.Announcements
@@ -11,47 +12,52 @@ import net.fabricmc.api.Environment
 import net.minecraft.client.Minecraft
 import net.minecraft.resources.Identifier
 import java.nio.file.Files
+import java.nio.file.Path
 
 @Environment(EnvType.CLIENT)
 object StationAnnouncementClient {
+    private var activeSound: AnnouncementSoundInstance? = null
+
     fun play(dimension: Identifier, event: MetroClientStorage.StationEvent) {
-        if (shouldPlayLocally()) return
-        playNow(dimension, event)
-    }
-
-    fun playServer(announcementId: String) {
-        playFile(announcementId)
-    }
-
-    private fun shouldPlayLocally(): Boolean = !isModOnServer
-
-    private fun playNow(dimension: Identifier, event: MetroClientStorage.StationEvent) {
+        if (!shouldPlayLocally()) return
         val stationId = when (event.type) {
             Announcements.AnnouncementType.ARRIVAL -> event.stationId
             Announcements.AnnouncementType.DEPARTURE -> event.announcementStationId
         } ?: return
-        val station = SMetroInfo.getInstance(dimension).stations.firstOrNull { it.id == stationId } ?: return
-        var announcementId = station.announcements.get(event.type)
-        if (announcementId == null) {
-            val line = SMetroInfo.getInstance(dimension).lines.firstOrNull { it.id == event.lineId } ?: return
-            announcementId = line.announcements.get(event.type) ?: return
-        }
-        playFile(announcementId)
+        playFiles(AnnouncementResolver.resolve(SMetroInfo.getInstance(dimension), stationId, event.lineId, event.type))
     }
 
-    private fun playFile(announcementId: String) {
-        if (!AnnouncementId.isValid(announcementId)) return
+    fun playServer(announcementIds: List<String>) {
+        playFiles(announcementIds)
+    }
+
+    private fun shouldPlayLocally(): Boolean = !isModOnServer
+
+    private fun playFiles(announcementIds: List<String>) {
+        if (announcementIds.firstOrNull()?.let(AnnouncementId::isValid) != true) return
+
         val directory = SMetroInfo.announcementsDirectory.toAbsolutePath().normalize()
-        val file = directory.resolve("$announcementId.wav").normalize()
-        if (file.parent != directory || !Files.isRegularFile(file)) {
-            SMetro.LOGGER.debug("Station announcement WAV is missing on the client: {}", file)
-            return
+        val paths = ArrayList<Path>(announcementIds.size)
+        for ((index, announcementId) in announcementIds.withIndex()) {
+            if (!AnnouncementId.isValid(announcementId)) continue
+            val file = directory.resolve("$announcementId.wav").normalize()
+            if (file.parent != directory || !Files.isRegularFile(file)) {
+                SMetro.LOGGER.debug("Station announcement WAV is missing on the client: {}", file)
+                if (index == 0) return
+                continue
+            }
+            paths.add(file)
         }
+        if (paths.isEmpty()) return
 
         try {
-            Minecraft.getInstance().soundManager.play(AnnouncementSoundInstance(file))
+            val soundManager = Minecraft.getInstance().soundManager
+            val sound = AnnouncementSoundInstance(paths)
+            activeSound?.let(soundManager::stop)
+            activeSound = sound
+            soundManager.play(sound)
         } catch (exception: Exception) {
-            SMetro.LOGGER.warn("Could not play station announcement '{}'", announcementId, exception)
+            SMetro.LOGGER.warn("Could not play station announcement sequence {}", announcementIds, exception)
         }
     }
 }

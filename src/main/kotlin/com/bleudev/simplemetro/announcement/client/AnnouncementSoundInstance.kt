@@ -15,7 +15,7 @@ import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 
 @Environment(EnvType.CLIENT)
-internal class AnnouncementSoundInstance(private val wavPath: Path) : AbstractSoundInstance(
+internal class AnnouncementSoundInstance(private val wavPaths: List<Path>) : AbstractSoundInstance(
     SMetro.resolve("station_announcement"),
     SoundSource.RECORDS,
     SoundInstance.createUnseededRandom(),
@@ -32,7 +32,7 @@ internal class AnnouncementSoundInstance(private val wavPath: Path) : AbstractSo
         id: Identifier,
         repeatInstantly: Boolean,
     ): CompletableFuture<AudioStream> = CompletableFuture.supplyAsync(
-        { WavAudioStream(wavPath) },
+        { WavAudioStream(wavPaths) },
         Util.nonCriticalIoPool(),
     )
 }

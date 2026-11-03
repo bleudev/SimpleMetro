@@ -130,19 +130,14 @@ object ServerAnnouncementTracker {
     }
 
     private fun tryBroadcast(player: ServerPlayer, info: SMetroInfo, dimension: Identifier, stationId: Int, lineId: Int?, type: Announcements.AnnouncementType) {
-        var id = info.stations.firstOrNull { it.id == stationId }?.announcements?.get(type)
-        if (id == null && lineId != null) {
-            id = info.lines.firstOrNull { it.id == lineId }?.announcements?.get(type)
-        }
-
-        if (id != null) {
-            broadcast(player, dimension, id)
-        }
+        val ids = AnnouncementResolver.resolve(info, stationId, lineId, type)
+        if (ids.isNotEmpty()) broadcast(player, dimension, ids)
     }
 
-    private fun broadcast(player: ServerPlayer, dimension: Identifier, announcementId: String) {
-        if (!AnnouncementId.isValid(announcementId)) return
-        if (AnnouncementTransportState.playWithSVC(player, announcementId)) return
-        player.sendPacket(ClientboundStationAnnouncement(dimension, announcementId))
+    private fun broadcast(player: ServerPlayer, dimension: Identifier, announcementIds: List<String>) {
+        val ids = announcementIds.filter(AnnouncementId::isValid)
+        if (ids.isEmpty()) return
+        if (AnnouncementTransportState.playWithSVC(player, ids)) return
+        player.sendPacket(ClientboundStationAnnouncement(dimension, ids))
     }
 }

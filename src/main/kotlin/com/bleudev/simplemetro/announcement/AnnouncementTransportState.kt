@@ -16,13 +16,14 @@ object AnnouncementTransportState {
 
     fun canPlayFor(playerId: UUID): Boolean = ModCompat.SVC.present && playerId in SVCPlayers
 
-    fun playWithSVC(player: ServerPlayer, announcementId: String): Boolean {
-        if (!canPlayFor(player.uuid)) return false
-        if (!ModCompat.SVC.present) return false
-        return runCatching { ModCompat.SVC.get().handleAnnouncement(player, announcementId) }.getOrDefault(false)
+    fun playWithSVC(player: ServerPlayer, announcementIds: List<String>): Boolean {
+        if (announcementIds.isEmpty() || announcementIds.any { !AnnouncementId.isValid(it) }) return false
+        if (!canPlayFor(player.uuid) || !ModCompat.SVC.present) return false
+        return runCatching { ModCompat.SVC.get().handleAnnouncements(player, announcementIds) }.getOrDefault(false)
     }
 
     fun reset() {
+        ModCompat.SVC { flushAnnouncementCache() }
         ModCompat.SVC.reset()
         SVCPlayers.clear()
     }
