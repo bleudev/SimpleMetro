@@ -257,13 +257,14 @@ internal object LinePanelRenderer {
         alpha: Float,
         textAlpha: Float,
     ) {
-        val accent = state.line?.color ?: COLOR_MUTED
+        if (state.line == null) return
+        val accent = state.line.color
 
         extractor.blitSprite(RenderPipelines.GUI_TEXTURED, BG_TEXTURE, x - 10, y - 10, PANEL_WIDTH + 15, PANEL_HEIGHT + 20)
         extractor.fill(x + 1, y + 1, x + 4, y + PANEL_HEIGHT - 1, color(accent, alpha))
 
         val font = Minecraft.getInstance().font
-        val lineLabel = state.line?.name ?: Component.translatable("smetro.hud.no_line").string
+        val lineLabel = state.line.name
         extractor.scrollingTextLineLeft(Component.literal(lineLabel).withColor(COLOR_MUTED), alpha, x + 9, y + 4, PANEL_WIDTH - 42)
 
         val col1 = x + 9
@@ -286,32 +287,32 @@ internal object LinePanelRenderer {
             )
         }
 
-        val currentStatus = state.currentStation.status.message?.string
+        var currentStatus = state.currentStation.status.message?.string
         val nextStatus = state.nextStation?.let { it.status.message?.string }
-        val currentColor = if (currentStatus != null) 0xFF9A8F else COLOR_TEXT
+        if (state.travelling) currentStatus = nextStatus
+
+        val currentColor = if (currentStatus != null) 0xFFFFA2 else COLOR_TEXT
         val nextColor = if (nextStatus != null) 0xFFFFA2 else COLOR_TEXT
 
         if (state.travelling) {
-            val nextName = state.nextStation?.name ?: Component.translatable(if (state.line == null) "smetro.hud.no_next_station" else "smetro.hud.terminal").string
+            val nextName = state.nextStation?.name ?: Component.translatable("smetro.hud.terminal").string
             extractor.scrollingTextLineLeft(Component.literal(nextName).withColor(currentColor), textAlpha, col1, y + 26, colWidth * 2)
         }
         else {
             extractor.scrollingTextLineLeft(Component.literal(state.currentStation.name).withColor(currentColor), textAlpha, col1, y + 26, colWidth)
-            val nextName = state.nextStation?.name ?: Component.translatable(if (state.line == null) "smetro.hud.no_next_station" else "smetro.hud.terminal").string
+            val nextName = state.nextStation?.name ?: Component.translatable("smetro.hud.terminal").string
             extractor.scrollingTextLineLeft(Component.literal(nextName).withColor(nextColor), textAlpha, col2, y + 26, colWidth)
         }
 
 
         if (currentStatus != null && !state.travelling) {
-            extractor.scrollingTextLineLeft(Component.literal(currentStatus).withColor(0xff8176), textAlpha, col1, y + 36, colWidth)
+            extractor.scrollingTextLineLeft(Component.literal(currentStatus).withColor(0xffb36b), textAlpha, col1, y + 36, colWidth)
         }
         if (nextStatus != null) {
             extractor.scrollingTextLineLeft(Component.literal(nextStatus).withColor(0xffb36b), textAlpha, if (state.travelling) col1 else col2, y + 36, if (state.travelling) colWidth * 2 else colWidth)
         }
 
-        if (state.line != null) {
-            drawRouteDiagram(extractor, x, y + 51, state, progress, alpha)
-        }
+        drawRouteDiagram(extractor, x, y + 51, state, progress, alpha)
         if (state.transfers.isNotEmpty()) {
             drawTransfers(extractor, x + 9, y + 61, state.transfers, alpha)
         }
@@ -367,7 +368,7 @@ internal object LinePanelRenderer {
         stations.forEachIndexed { index, station ->
             if (!station.status.invisible) {
                 val cx = (startX + spacing * index).roundToInt()
-                val nodeColor = if (!station.status.open) 0xFF8176 else lineColor
+                val nodeColor = if (!station.status.open) 0xFFFFA2 else lineColor
                 fill(extractor, cx - 2, y - 2, cx + 3, y + 3, COLOR_BACKGROUND, alpha)
                 fill(extractor, cx - 1, y - 1, cx + 2, y + 2, nodeColor, alpha)
             }

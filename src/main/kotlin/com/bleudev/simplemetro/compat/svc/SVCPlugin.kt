@@ -25,9 +25,9 @@ class SVCPlugin : VoicechatPlugin {
                 .setId(ANNOUNCEMENTS_CATEGORY)
                 .setName("Announcements")
                 .setNameTranslationKey("smetro.voicechat.category.announcements")
-                .setDescription("Arrival / Departure announcements")
+                .setDescription("Metro Announcements")
                 .setDescriptionTranslationKey("smetro.voicechat.category.announcements.description")
-                .setIcon(getIcon("category_announcements.png"))
+                .setIcon(getIcon("assets/simplemetro/textures/gui/sprites/category_announcements.png"))
                 .build()
 
             serverApi.registerVolumeCategory(category)
