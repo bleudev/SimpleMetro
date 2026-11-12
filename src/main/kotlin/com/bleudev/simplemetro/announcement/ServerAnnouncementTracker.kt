@@ -135,9 +135,8 @@ object ServerAnnouncementTracker {
     }
 
     private fun broadcast(player: ServerPlayer, dimension: Identifier, announcementIds: List<String>) {
-        val ids = announcementIds.filter(AnnouncementId::isValid)
-        if (ids.isEmpty()) return
-        if (AnnouncementTransportState.playWithSVC(player, ids)) return
-        player.sendPacket(ClientboundStationAnnouncement(dimension, ids))
+        if (announcementIds.isEmpty()) return
+        if (AnnouncementTransportState.playWithSVC(player, announcementIds)) return
+        player.sendPacket(ClientboundStationAnnouncement(dimension, announcementIds))
     }
 }
