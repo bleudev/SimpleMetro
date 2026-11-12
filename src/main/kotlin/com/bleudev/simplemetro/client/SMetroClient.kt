@@ -12,6 +12,7 @@ import com.bleudev.simplemetro.custom.network.protocol.common.custom.Clientbound
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundSuggestionContextSync
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.i.IPacketCompanion
 import com.bleudev.simplemetro.util.SuggestionContext
+import com.bleudev.simplemetro.util.isModOnServer
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
@@ -27,10 +28,13 @@ import net.minecraft.world.level.storage.LevelResource
 
 @Environment(EnvType.CLIENT)
 class SMetroClient : ClientModInitializer {
+    private var hadActiveRoute = false
+
     override fun onInitializeClient() {
         SMetroPacketPayloads.initializeClient()
 
         ClientPlayConnectionEvents.JOIN.register { l, _, mc ->
+            hadActiveRoute = false
             val sd = l.serverData
             val sp = mc.singleplayerServer
             if (sp != null) {
@@ -68,6 +72,12 @@ class SMetroClient : ClientModInitializer {
             if (player != null) {
                 val storage = MetroClientStorage.getInstance()
                 storage.onPlayerTick(player, level)
+                val hasActiveRoute = storage.currentLine != null &&
+                    storage.prevVisibleStation != null && storage.nextVisibleStation != null
+                if (hadActiveRoute && !hasActiveRoute && !isModOnServer) {
+                    StationAnnouncementClient.stop()
+                }
+                hadActiveRoute = hasActiveRoute
                 while (true) {
                     val event = storage.pollSoundEvent() ?: break
                     StationAnnouncementClient.play(level.dimension().identifier(), event)

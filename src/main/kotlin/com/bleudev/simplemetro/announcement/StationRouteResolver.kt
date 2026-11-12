@@ -62,10 +62,6 @@ object StationRouteResolver {
         return bestId
     }
 
-    /**
-     * Finds the visible station immediately ahead on the most likely outgoing route.
-     * Invisible stations remain part of the route geometry but are skipped as stops.
-     */
     fun resolveNextStation(
         info: SMetroInfo,
         fromStationId: Int,
@@ -131,6 +127,52 @@ object StationRouteResolver {
         }?.route
     }
 
+    fun isNearRoute(
+        info: SMetroInfo,
+        lineId: Int?,
+        direction: Int?,
+        fromStationId: Int?,
+        toStationId: Int?,
+        playerPos: Vec3,
+    ): Boolean {
+        if (lineId == null || direction == null || fromStationId == null || toStationId == null) return false
+        val line = info.lines.firstOrNull { it.id == lineId } ?: return false
+        val stationsById = info.stations.associateBy { it.id }
+        val source = stationsById[fromStationId] ?: return false
+
+        for (startIndex in line.stations.indices.filter { line.stations[it] == fromStationId }) {
+            val points = ArrayList<Vec3>()
+            points.add(Vec3.atCenterOf(source.pos))
+            var index = startIndex + direction
+            var foundTarget = false
+
+            while (index in line.stations.indices) {
+                val station = stationsById[line.stations[index]] ?: break
+                points.add(Vec3.atCenterOf(station.pos))
+                if (station.id == toStationId) {
+                    foundTarget = true
+                    break
+                }
+                if (!station.status.invisible) break
+                index += direction
+            }
+
+            if (!foundTarget) continue
+            for (segment in 0 until points.lastIndex) {
+                val a = points[segment]
+                val ab = points[segment + 1].subtract(a)
+                val lengthSqr = ab.lengthSqr()
+                if (lengthSqr <= 1.0e-9) continue
+                val t = (playerPos.subtract(a).dot(ab) / lengthSqr).coerceIn(0.0, 1.0)
+                val closest = a.add(ab.scale(t))
+                if (closest.horizontal().distanceTo(playerPos.horizontal()) <= TRACK_CHECK_RADIUS &&
+                    abs(closest.y - playerPos.y) <= TRACK_CHECK_HEIGHT
+                ) return true
+            }
+        }
+        return false
+    }
+
     private fun project(points: List<Vec3>, playerPos: Vec3, motion: Vec3): Projection? {
         if (points.size < 2) return null
 
@@ -177,6 +219,8 @@ object StationRouteResolver {
     private const val STATION_EXIT_RADIUS = 9.0
     private const val STATION_SWITCH_MARGIN = 1.0
     private const val STATION_CHECK_HEIGHT = 5.0
+    private const val TRACK_CHECK_RADIUS = 7.0
+    private const val TRACK_CHECK_HEIGHT = 5.0
     private const val MOVEMENT_EPSILON_SQR = 0.0004
     private const val DIRECTION_WEIGHT = 4.0
     private const val LINE_PREFERENCE = 0.75

@@ -20,6 +20,10 @@ import javax.sound.sampled.AudioSystem
 class SVCCompatImpl(private val serverApi: VoicechatServerApi) : SVCCompat {
     override fun handleAnnouncements(player: ServerPlayer, ids: List<String>): Boolean = playByIds(serverApi, player, ids)
 
+    override fun stopAllAnnouncements(player: ServerPlayer) {
+        activePlayers.remove(player.uuid)?.let { runCatching { it.stopPlaying() } }
+    }
+
     override fun flushAnnouncementCache() {
         activePlayers.values.forEach { runCatching { it.stopPlaying() } }
         activePlayers.clear()

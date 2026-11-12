@@ -27,7 +27,12 @@ object StationAnnouncementClient {
     }
 
     fun playServer(announcementIds: List<String>) {
-        playFiles(announcementIds)
+        if (announcementIds.isEmpty()) stop() else playFiles(announcementIds)
+    }
+
+    fun stop() {
+        activeSound?.let(Minecraft.getInstance().soundManager::stop)
+        activeSound = null
     }
 
     private fun shouldPlayLocally(): Boolean = !isModOnServer

@@ -22,6 +22,12 @@ object AnnouncementTransportState {
         return runCatching { ModCompat.SVC.get().handleAnnouncements(player, announcementIds) }.getOrDefault(false)
     }
 
+    fun stop(player: ServerPlayer) {
+        if (ModCompat.SVC.present) {
+            runCatching { ModCompat.SVC.get().stopAllAnnouncements(player) }
+        }
+    }
+
     fun reset() {
         ModCompat.SVC { flushAnnouncementCache() }
         ModCompat.SVC.reset()

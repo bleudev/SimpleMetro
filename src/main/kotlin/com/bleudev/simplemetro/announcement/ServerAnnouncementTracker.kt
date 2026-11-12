@@ -21,6 +21,8 @@ object ServerAnnouncementTracker {
         val lineId: Int?,
         val direction: Int?,
         val nextStationId: Int?,
+        val routeFromStationId: Int?,
+        val offTrackTicks: Int,
     )
 
     private val states = HashMap<UUID, PlayerState>()
@@ -70,6 +72,8 @@ object ServerAnnouncementTracker {
                 route?.lineId,
                 route?.direction,
                 route?.nextStationId,
+                current,
+                0,
             )
             if (current != null) {
                 val lineId = states[player.uuid]?.lineId
@@ -105,6 +109,8 @@ object ServerAnnouncementTracker {
                         lineId,
                         route?.direction ?: previous.direction,
                         route?.nextStationId ?: previous.nextStationId,
+                        previous.stationId,
+                        0,
                     )
                     return
                 }
@@ -119,13 +125,33 @@ object ServerAnnouncementTracker {
         val route = current?.let {
             StationRouteResolver.resolveNextStation(info, it, position, motion, previous.lineId, previous.direction)
         }
+        val lineId = route?.lineId ?: previous.lineId
+        val direction = route?.direction ?: previous.direction
+        val nextStationId = route?.nextStationId ?: previous.nextStationId
+        val routeFromStationId = current ?: previous.routeFromStationId
+        val onRoute = current != null || StationRouteResolver.isNearRoute(
+            info,
+            lineId,
+            direction,
+            routeFromStationId,
+            nextStationId,
+            position,
+        )
+        val offTrackTicks = if (onRoute) 0 else previous.offTrackTicks + 1
+
+        if (current == null && offTrackTicks > OFF_TRACK_GRACE_TICKS && previous.offTrackTicks <= OFF_TRACK_GRACE_TICKS) {
+            stopAllAnnouncements(player, dimension)
+        }
+
         states[player.uuid] = PlayerState(
             dimension,
             current,
             position,
-            route?.lineId ?: previous.lineId,
-            route?.direction ?: previous.direction,
-            route?.nextStationId ?: previous.nextStationId,
+            lineId,
+            direction,
+            nextStationId,
+            routeFromStationId,
+            offTrackTicks,
         )
     }
 
@@ -139,4 +165,11 @@ object ServerAnnouncementTracker {
         if (AnnouncementTransportState.playWithSVC(player, announcementIds)) return
         player.sendPacket(ClientboundStationAnnouncement(dimension, announcementIds))
     }
+
+    private fun stopAllAnnouncements(player: ServerPlayer, dimension: Identifier) {
+        AnnouncementTransportState.stop(player)
+        player.sendPacket(ClientboundStationAnnouncement(dimension, emptyList()))
+    }
+
+    private const val OFF_TRACK_GRACE_TICKS = 8
 }
