@@ -24,7 +24,7 @@ internal object SVCServerAnnouncements {
     private var started = false
     private var initializedServer: MinecraftServer? = null
 
-    fun start(serverApi: VoicechatServerApi) {
+    fun initialize(serverApi: VoicechatServerApi) {
         api = serverApi
         ModCompat.SVC.initialize(SVCCompatImpl(serverApi))
         if (started) return

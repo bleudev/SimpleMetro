@@ -32,7 +32,7 @@ class SVCPlugin : VoicechatPlugin {
 
             serverApi.registerVolumeCategory(category)
             announcements = category
-            SVCServerAnnouncements.start(serverApi)
+            SVCServerAnnouncements.initialize(serverApi)
         } catch (exception: Exception) {
             AnnouncementTransportState.reset()
             SMetro.LOGGER.error("Simple Voice Chat station announcements could not be initialized", exception)
