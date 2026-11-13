@@ -7,6 +7,7 @@ import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.config.obj.Announcements
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
+import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.ActiveTextCollector
 import net.minecraft.client.gui.GuiGraphicsExtractor
@@ -37,6 +38,8 @@ internal object LinePanelRenderer {
     private const val ARRIVAL_NOTIFICATION_DURATION_MS = 3_600L
     private const val ARRIVAL_FADE_IN_MS = 280L
     private const val ARRIVAL_FADE_OUT_MS = 650L
+    private const val NEXT_STATION_DISTANCE_TIME_TOTAL_MS = 10000L
+    private const val NEXT_STATION_DISTANCE_TIME_FADE_MS = 500L
 
     private const val COLOR_BACKGROUND = 0x101820
     private const val COLOR_MUTED = 0x9BACB8
@@ -68,7 +71,7 @@ internal object LinePanelRenderer {
         val nextStation: MetroSchemeExtractor.StationRenderState?,
         val routeStations: List<MetroSchemeExtractor.StationRenderState>,
         val transfers: List<TransferState>,
-        val travelling: Boolean,
+        val travelling: Boolean
     )
 
     private data class ActiveToast(
@@ -288,6 +291,13 @@ internal object LinePanelRenderer {
             )
         }
 
+        if (state.travelling) {
+            extractor.pose().pushMatrix()
+            extractor.pose().translate((x + PANEL_WIDTH - 7).toFloat(), (y + 17).toFloat())
+            drawDistancesAndTimeToNextStation(extractor, alpha)
+            extractor.pose().popMatrix()
+        }
+
         var currentStatus = state.currentStation.status.message?.string
         val nextStatus = state.nextStation?.let { it.status.message?.string }
         if (state.travelling) currentStatus = nextStatus
@@ -317,6 +327,34 @@ internal object LinePanelRenderer {
         if (state.transfers.isNotEmpty()) {
             drawTransfers(extractor, x + 9, y + 61, state.transfers, alpha)
         }
+    }
+
+    private fun drawDistancesAndTimeToNextStation(extractor: GuiGraphicsExtractor, alpha: Float) {
+        val distance = MetroClientStorage.getInstance().distanceToNextStation ?: return
+        val time = MetroClientStorage.getInstance().timeToNextStationMillis
+
+        val m = Util.getMillis()
+        val tick = m % NEXT_STATION_DISTANCE_TIME_TOTAL_MS
+        var delta = if (tick <= NEXT_STATION_DISTANCE_TIME_TOTAL_MS / 2) {
+            (tick.toFloat() / NEXT_STATION_DISTANCE_TIME_FADE_MS).coerceIn(0f, 1f)
+        } else {
+            1f - (((tick - NEXT_STATION_DISTANCE_TIME_TOTAL_MS / 2).toFloat() / NEXT_STATION_DISTANCE_TIME_FADE_MS).coerceIn(0f, 1f))
+        }
+        if (time == null) delta = 1f
+        if (delta > 0) drawDistance(extractor, distance.roundToInt(), alpha * delta)
+        if (delta < 1 && time != null) drawTimeWithMillis(extractor, time, alpha * (1f-delta))
+    }
+
+    private fun drawDistance(extractor: GuiGraphicsExtractor, distance: Int, alpha: Float) {
+        val msg = Component.literal("$distance б").withStyle(ChatFormatting.GRAY)
+        val width = Minecraft.getInstance().font.width(msg)
+        extractor.scrollingTextLineLeft(msg, alpha, -width, 0, width)
+    }
+    
+    private fun drawTimeWithMillis(extractor: GuiGraphicsExtractor, time: Int, alpha: Float) {
+        val msg = Component.literal("${time / 1000} c").withStyle(ChatFormatting.GRAY)
+        val width = Minecraft.getInstance().font.width(msg)
+        extractor.scrollingTextLineLeft(msg, alpha, -width, 0, width)
     }
 
     private fun drawArrivalNotificationPanel(

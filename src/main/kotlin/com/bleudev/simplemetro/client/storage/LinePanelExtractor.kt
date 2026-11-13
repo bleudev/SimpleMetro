@@ -27,6 +27,7 @@ class LinePanelExtractor private constructor() {
         val distanceVertical: Double,
         val progress: Double,
         val tangent: Vec3,
+        val distanceToNext: Double,
     ) {
         val isNearTrack: Boolean
             get() = distanceHorizontal <= TRACK_CHECK_RADIUS && distanceVertical <= TRACK_CHECK_HEIGHT
@@ -173,11 +174,18 @@ class LinePanelExtractor private constructor() {
                         ?.toFloat()
                         ?.coerceIn(0f, 1f)
                         ?: 0f
+
+                    storage.distanceToNextStation = projection
+                        ?.takeIf { it.isNearTrack }
+                        ?.distanceToNext
+                        ?.coerceAtLeast(0.0)
                 } else {
                     storage.stationProgress = 0f
+                    storage.distanceToNextStation = null
                 }
             } else {
                 storage.stationProgress = 0f
+                storage.distanceToNextStation = null
             }
             offTrackTicks = 0
             return
@@ -199,6 +207,7 @@ class LinePanelExtractor private constructor() {
             val projection = projectOnPath(path.points, playerPos, motion)
             if (projection != null && projection.isNearTrack) {
                 storage.stationProgress = projection.progress.toFloat().coerceIn(0f, 1f)
+                storage.distanceToNextStation = projection.distanceToNext
                 offTrackTicks = 0
             } else {
                 offTrackTicks++
@@ -206,6 +215,7 @@ class LinePanelExtractor private constructor() {
             }
         } else {
             storage.stationProgress = null
+            storage.distanceToNextStation = null
         }
     }
 
@@ -386,8 +396,9 @@ class LinePanelExtractor private constructor() {
 
             if (metric < bestMetric) {
                 val progress = (lengthBefore + segmentLength * t) / totalLength
+                val distanceToNext = totalLength - (lengthBefore + segmentLength * t)
                 bestMetric = metric
-                best = Projection(horizontalDistance, verticalDistance, progress, tangent)
+                best = Projection(horizontalDistance, verticalDistance, progress, tangent, distanceToNext)
             }
             lengthBefore += segmentLength
         }
@@ -401,6 +412,7 @@ class LinePanelExtractor private constructor() {
         storage.currentLine = path?.lineId ?: fallbackLineId
         storage.nextVisibleStation = path?.toStationId
         storage.stationProgress = if (path != null) 0f else null
+        storage.distanceToNextStation = null
     }
 
     private fun clearRoute(storage: MetroClientStorage) {
@@ -410,6 +422,7 @@ class LinePanelExtractor private constructor() {
         storage.nextVisibleStation = null
         storage.currentLine = null
         storage.stationProgress = null
+        storage.distanceToNextStation = null
     }
 
     private fun reset(storage: MetroClientStorage) {
@@ -420,6 +433,7 @@ class LinePanelExtractor private constructor() {
         storage.nextVisibleStation = null
         storage.currentLine = null
         storage.stationProgress = null
+        storage.distanceToNextStation = null
     }
 
     companion object {

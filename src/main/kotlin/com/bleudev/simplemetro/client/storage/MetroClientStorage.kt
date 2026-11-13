@@ -3,9 +3,12 @@ package com.bleudev.simplemetro.client.storage
 import com.bleudev.simplemetro.config.obj.Announcements
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
+import net.minecraft.SharedConstants.MILLIS_PER_TICK
+import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.player.LocalPlayer
 import java.util.*
+import kotlin.math.roundToInt
 
 @Environment(EnvType.CLIENT)
 class MetroClientStorage private constructor() {
@@ -15,6 +18,8 @@ class MetroClientStorage private constructor() {
 
     var currentLine: Int? = null
     var stationProgress: Float? = null
+    var distanceToNextStation: Double? = null
+    var timeToNextStationMillis: Int? = null
 
     private val stationEvents = ArrayDeque<StationEvent>()
     private val soundEvents = ArrayDeque<StationEvent>()
@@ -22,6 +27,13 @@ class MetroClientStorage private constructor() {
 
     fun onPlayerTick(player: LocalPlayer, level: ClientLevel) {
         LinePanelExtractor.getInstance().playerTick(this, player, level)
+
+        // Time to next station calculating
+        val dist = distanceToNextStation
+        val playerSpeed = Minecraft.getInstance().cameraEntity?.knownSpeed?.length()
+        timeToNextStationMillis = if (dist != null && playerSpeed != null && playerSpeed != 0.0) {
+            (dist * MILLIS_PER_TICK / playerSpeed).roundToInt()
+        } else null
     }
 
     fun publishStationEvent(type: Announcements.AnnouncementType, stationId: Int, stationName: String, lineId: Int?, announcementStationId: Int? = stationId) {
