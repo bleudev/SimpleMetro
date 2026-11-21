@@ -61,7 +61,7 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
             Files.createDirectories(basePath)
             return Files.walk(basePath).filter {
                 val f = it.toFile()
-                return@filter f.isFile && f.extension == "json" && it.parent == basePath
+                return@filter f.isFile && f.extension == "json" && it.parent.parent == basePath
             }.toList().mapNotNull { if (it.parent != basePath) Identifier.fromNamespaceAndPath(it.parent.name, it.nameWithoutExtension) else null }.toList()
         }
 
