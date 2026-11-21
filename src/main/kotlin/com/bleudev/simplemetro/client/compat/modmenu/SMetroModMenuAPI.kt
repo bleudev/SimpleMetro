@@ -14,7 +14,7 @@ class SMetroModMenuAPI : ModMenuApi {
     }
 
     private class SMetroScreenFactory : ConfigScreenFactory<Screen> {
-        override fun create(parent: Screen): Screen? {
+        override fun create(parent: Screen?): Screen? {
             return ModCompat.MODMENU.getOrNull()?.gui(parent)
         }
     }

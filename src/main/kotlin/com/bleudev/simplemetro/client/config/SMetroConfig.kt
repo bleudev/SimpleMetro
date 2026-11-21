@@ -18,6 +18,8 @@ import kotlinx.serialization.Serializable
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.fabricmc.loader.api.FabricLoader
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.screens.ChatScreen
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import kotlin.math.roundToInt
@@ -32,16 +34,21 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
 ), ModMenuCompat {
     @Serializable
     data class SerializableConfig(
-        var panel: Panel = Panel()
+        var scheme: Scheme = Scheme(),
+        var panel: Panel = Panel(),
     ) {
+        @Serializable
+        data class Scheme(
+            @SerialName("show_on_xaero_map")
+            var showOnXaeroMap: Boolean = false,
+            @SerialName("show_on_xaero_minimap")
+            var showOnXaeroMinimap: Boolean = false
+        )
+
         @Serializable
         data class Panel(
             var show: Boolean = true,
             var position: PanelPosition = PanelPosition.TOP_RIGHT,
-            @SerialName("show_on_xaero_map")
-            var showOnXaeroMap: Boolean = false,
-            @SerialName("show_on_xaero_minimap")
-            var showOnXaeroMinimap: Boolean = false,
         ) {
             enum class PanelPosition : NameableEnum {
                 TOP_LEFT {
@@ -59,15 +66,15 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
                 },
                 BOTTOM_LEFT {
                     override fun position(guiWidth: Int, guiHeight: Int, slide: Float): Pair<Int, Int> {
-                        return start(P_WIDTH, slide) to end(P_HEIGHT, guiHeight, 1f) - P_HOTBAR_MARGIN
+                        return start(P_WIDTH, slide) to end(P_HEIGHT, guiHeight, 1f) - margin()
                     }
                 }, BOTTOM {
                     override fun position(guiWidth: Int, guiHeight: Int, slide: Float): Pair<Int, Int> {
-                        return center(P_WIDTH, guiWidth) to end(P_HEIGHT, guiHeight, slide) - P_HOTBAR_MARGIN
+                        return center(P_WIDTH, guiWidth) to end(P_HEIGHT, guiHeight, slide) - margin()
                     }
                 }, BOTTOM_RIGHT {
                     override fun position(guiWidth: Int, guiHeight: Int, slide: Float): Pair<Int, Int> {
-                        return end(P_WIDTH, guiWidth, slide) to end(P_HEIGHT, guiHeight, 1f) - P_HOTBAR_MARGIN
+                        return end(P_WIDTH, guiWidth, slide) to end(P_HEIGHT, guiHeight, 1f) - margin()
                     }
                 };
 
@@ -79,9 +86,20 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
 
                 companion object {
                     private const val P_MARGIN = LinePanelRenderer.PANEL_MARGIN
-                    private const val P_HOTBAR_MARGIN = 20
                     private const val P_WIDTH = LinePanelRenderer.PANEL_WIDTH
                     private const val P_HEIGHT = LinePanelRenderer.PANEL_HEIGHT
+
+                    private fun margin(): Int {
+                        var result = 25
+                        val player = Minecraft.getInstance().player ?: return result
+                        if (player.gameMode()?.isSurvival == true) {
+                            result += 10
+                            if (player.armorValue > 0) {
+                                result += 10
+                            }
+                        }
+                        return result
+                    }
 
                     private fun start(side: Int, slide: Float): Int {
                         return P_MARGIN + ((slide - 1f) * side).roundToInt()
@@ -94,10 +112,18 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
                     }
                 }
             }
+
+            fun shouldRender(): Boolean {
+                if (!show) return false
+                if (position == PanelPosition.BOTTOM_LEFT) {
+                    return Minecraft.getInstance().gui.screen() !is ChatScreen
+                }
+                return true
+            }
         }
     }
 
-    override fun <P : Screen> gui(parent: P): Screen {
+    override fun <P : Screen> gui(parent: P?): Screen {
         val config = load()
         return YetAnotherConfigLib(SMetro.ID) {
             save { save(config) }
@@ -111,7 +137,7 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
                 rootOptions.registerLabel("comment_scheme")
                 rootOptions.register<Boolean>("show_on_xaero_map") {
                     controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
-                    binding(true, config.panel::showOnXaeroMap, config.panel::showOnXaeroMap::set)
+                    binding(true, config.scheme::showOnXaeroMap, config.scheme::showOnXaeroMap::set)
                     descriptionBuilder {
                         addDefaultText(1)
                     }
@@ -119,7 +145,7 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
                 }
                 rootOptions.register<Boolean>("show_on_xaero_minimap") {
                     controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
-                    binding(true, config.panel::showOnXaeroMinimap, config.panel::showOnXaeroMinimap::set)
+                    binding(true, config.scheme::showOnXaeroMinimap, config.scheme::showOnXaeroMinimap::set)
                     descriptionBuilder {
                         addDefaultText(1)
                     }

@@ -42,7 +42,7 @@ internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
         mapScreenScale: Double,
         dimension: Identifier,
     ) {
-        if (!SMetroConfig.load().panel.showOnXaeroMap) return
+        if (!SMetroConfig.load().scheme.showOnXaeroMap) return
 
         this.width = extractor.guiWidth()
         this.height = extractor.guiHeight()

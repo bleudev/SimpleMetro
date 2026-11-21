@@ -31,7 +31,7 @@ internal object XaeroMinimapSchemeRenderer : XaeroCommonSchemeRenderer() {
         playerCoordinateScale: Double,
         dimension: Identifier,
     ) {
-        if (!SMetroConfig.load().panel.showOnXaeroMinimap) return
+        if (!SMetroConfig.load().scheme.showOnXaeroMinimap) return
 
         this.zoom = zoom
         this.dim = dimension

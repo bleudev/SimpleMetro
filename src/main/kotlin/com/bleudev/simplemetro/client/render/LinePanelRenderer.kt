@@ -266,7 +266,7 @@ internal object LinePanelRenderer {
         textAlpha: Float,
     ) {
         if (state.line == null) return
-        if (!SMetroConfig.load().panel.show) return
+        if (!SMetroConfig.load().panel.shouldRender()) return
         val accent = state.line.color
 
         extractor.blitSprite(RenderPipelines.GUI_TEXTURED, BG_TEXTURE, x - 10, y - 10, PANEL_WIDTH + 15, PANEL_HEIGHT + 20)
@@ -370,7 +370,7 @@ internal object LinePanelRenderer {
         alpha: Float,
     ) {
         if (tableRenderState?.line == null) return
-        if (!SMetroConfig.load().panel.show) return
+        if (!SMetroConfig.load().panel.shouldRender()) return
         val font = Minecraft.getInstance().font
         val columnX = x + 9
         val columnWidth = PANEL_WIDTH - 24
