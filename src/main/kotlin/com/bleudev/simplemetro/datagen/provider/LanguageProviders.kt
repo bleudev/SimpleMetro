@@ -63,11 +63,25 @@ class SMetroDefaultLanguage(output: FabricPackOutput, registryLookup: Completabl
             translate("Config of Simple Metro mod") {description()}
 
             tb = tb.root()
+
+            // Scheme
+            tb = tb.label("comment_scheme")
+            translate("Scheme")
+            tb = tb.option("show_on_xaero_map")
+            translate("Show on Xaero's Map")
+            translate("Show panel on Xaero's World Map") {description()}
+            tb = tb.option("show_on_xaero_minimap")
+            translate("Show on Xaero's Minimap")
+            translate("Show panel on Xaero's Minimap") {description()}
+
+            // Panel
+            tb = tb.label("comment_panel")
+            translate("Panel")
             tb = tb.option("show_panel")
-            translate("Show panel")
+            translate("Show")
             translate("Show panel during transportation") {description()}
             tb = tb.option("panel_position")
-            translate("Panel position")
+            translate("Position")
             translate("Panel position") {description()}
 
             translate("Top left") {enum(PanelPosition.TOP_LEFT)}
@@ -128,11 +142,24 @@ class SMetroRussianLanguage(output: FabricPackOutput, registryLookup: Completabl
             translate("Конфиг мода Simple Metro") {description()}
 
             tb = tb.root()
+            // Scheme
+            tb = tb.label("comment_scheme")
+            translate("Схема")
+            tb = tb.option("show_on_xaero_map")
+            translate("Показать на карте Xaero")
+            translate("Показать схему на Xaero's World Map") {description()}
+            tb = tb.option("show_on_xaero_minimap")
+            translate("Показать на миникарте Xaero")
+            translate("Показать схему на Xaero's Minimap") {description()}
+
+            // Panel
+            tb = tb.label("comment_panel")
+            translate("Панель")
             tb = tb.option("show_panel")
-            translate("Показать панель")
+            translate("Показать")
             translate("Показать панель во время движения") {description()}
             tb = tb.option("panel_position")
-            translate("Позиция панели")
+            translate("Позиция")
             translate("Позиция панели") {description()}
 
             translate("Вверху слева") {enum(PanelPosition.TOP_LEFT)}
@@ -189,23 +216,36 @@ class SMetroPreReformRussianLanguage(output: FabricPackOutput, registryLookup: C
 
         WrappedTranslate(builder).run {
             tb = tb.category("root")
-            translate("Конфиг Simple Metro") // TODO: rpr
-            translate("Конфиг мода Simple Metro") {description()} // TODO: rpr
+            translate("Настройки Simple Metro")
+            translate("Настройки дополненія Simple Metro") { description() }
 
             tb = tb.root()
-            tb = tb.option("show_panel")
-            translate("Показать панель") // TODO: rpr
-            translate("Показать панель во время движения") {description()} // TODO: rpr
-            tb = tb.option("panel_position")
-            translate("Позиция панели") // TODO: rpr
-            translate("Позиция панели") {description()} // TODO: rpr
+            // Scheme
+            tb = tb.label("comment_scheme")
+            translate("Схема")
+            tb = tb.option("show_on_xaero_map")
+            translate("На картѣ Xaero's World Map")
+            translate("Отображать схему на картѣ мира Xaero's World Map") { description() }
+            tb = tb.option("show_on_xaero_minimap")
+            translate("На мини-картѣ Xaero's Minimap")
+            translate("Отображать схему на мини-картѣ Xaero's Minimap") { description() }
 
-            translate("Вверху слева") {enum(PanelPosition.TOP_LEFT)} // TODO: rpr
-            translate("Вверху") {enum(PanelPosition.TOP)} // TODO: rpr
-            translate("Вверху справа") {enum(PanelPosition.TOP_RIGHT)} // TODO: rpr
-            translate("Снизу слева") {enum(PanelPosition.BOTTOM_LEFT)} // TODO: rpr
-            translate("Снизу") {enum(PanelPosition.BOTTOM)} // TODO: rpr
-            translate("Снизу справа") {enum(PanelPosition.BOTTOM_RIGHT)} // TODO: rpr
+            // Panel
+            tb = tb.label("comment_panel")
+            translate("Панель")
+            tb = tb.option("show_panel")
+            translate("Отображать")
+            translate("Отображать панель во время движенія") { description() }
+            tb = tb.option("panel_position")
+            translate("Положеніе")
+            translate("Положеніе панели на экранѣ") { description() }
+
+            translate("Сверху слѣва") { enum(PanelPosition.TOP_LEFT) }
+            translate("Сверху") { enum(PanelPosition.TOP) }
+            translate("Сверху справа") { enum(PanelPosition.TOP_RIGHT) }
+            translate("Снизу слѣва") { enum(PanelPosition.BOTTOM_LEFT) }
+            translate("Снизу") { enum(PanelPosition.BOTTOM) }
+            translate("Снизу справа") { enum(PanelPosition.BOTTOM_RIGHT) }
         }
     }
 }

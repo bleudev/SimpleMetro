@@ -13,6 +13,8 @@ class ConfigTranslationKeyBuilder private constructor(private val current: Array
         update(arrayOfNulls<String>(4).also { it[2] = "group.$group"; it[3] = "" })
     fun option(option: String): ConfigTranslationKeyBuilder =
         update(arrayOfNulls<String>(4).also { it[3] = "option.$option" })
+    fun label(label: String): ConfigTranslationKeyBuilder =
+        update(arrayOfNulls<String>(4).also { it[3] = "label.$label" })
     fun description(): ConfigTranslationKeyBuilder =
         update(arrayOfNulls<String>(5).also { it[4] = "description" })
     fun additional(path: String): ConfigTranslationKeyBuilder =

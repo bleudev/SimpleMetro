@@ -13,6 +13,7 @@ import dev.isxander.yacl3.dsl.OptionDsl
 import dev.isxander.yacl3.dsl.YetAnotherConfigLib
 import dev.isxander.yacl3.dsl.available
 import dev.isxander.yacl3.dsl.descriptionBuilder
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
@@ -34,7 +35,14 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
         var panel: Panel = Panel()
     ) {
         @Serializable
-        data class Panel(var show: Boolean = true, var position: PanelPosition = PanelPosition.TOP_RIGHT) {
+        data class Panel(
+            var show: Boolean = true,
+            var position: PanelPosition = PanelPosition.TOP_RIGHT,
+            @SerialName("show_on_xaero_map")
+            var showOnXaeroMap: Boolean = false,
+            @SerialName("show_on_xaero_minimap")
+            var showOnXaeroMinimap: Boolean = false,
+        ) {
             enum class PanelPosition : NameableEnum {
                 TOP_LEFT {
                     override fun position(guiWidth: Int, guiHeight: Int, slide: Float): Pair<Int, Int> {
@@ -51,15 +59,15 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
                 },
                 BOTTOM_LEFT {
                     override fun position(guiWidth: Int, guiHeight: Int, slide: Float): Pair<Int, Int> {
-                        return start(P_WIDTH, slide) to end(P_HEIGHT, guiHeight, 1f)
+                        return start(P_WIDTH, slide) to end(P_HEIGHT, guiHeight, 1f) - P_HOTBAR_MARGIN
                     }
                 }, BOTTOM {
                     override fun position(guiWidth: Int, guiHeight: Int, slide: Float): Pair<Int, Int> {
-                        return center(P_WIDTH, guiWidth) to end(P_HEIGHT, guiHeight, slide)
+                        return center(P_WIDTH, guiWidth) to end(P_HEIGHT, guiHeight, slide) - P_HOTBAR_MARGIN
                     }
                 }, BOTTOM_RIGHT {
                     override fun position(guiWidth: Int, guiHeight: Int, slide: Float): Pair<Int, Int> {
-                        return end(P_WIDTH, guiWidth, slide) to end(P_HEIGHT, guiHeight, 1f)
+                        return end(P_WIDTH, guiWidth, slide) to end(P_HEIGHT, guiHeight, 1f) - P_HOTBAR_MARGIN
                     }
                 };
 
@@ -71,6 +79,7 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
 
                 companion object {
                     private const val P_MARGIN = LinePanelRenderer.PANEL_MARGIN
+                    private const val P_HOTBAR_MARGIN = 20
                     private const val P_WIDTH = LinePanelRenderer.PANEL_WIDTH
                     private const val P_HEIGHT = LinePanelRenderer.PANEL_HEIGHT
 
@@ -94,11 +103,31 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
             save { save(config) }
             categories.register("root") {
                 val dependsOnShowPanelIds = arrayListOf<String>()
-                fun <T : Any> OptionDsl<T>.dependsOnShowPanel() {
+                fun <T : Any> OptionDsl<T>.dependsOnShowPanel(availableCondition: () -> Boolean = {true}) {
                     dependsOnShowPanelIds.add(optionId)
-                    available { rootOptions.futureRef<Boolean>("show_panel").getNow(null)?.pendingValue() ?: true }
+                    available { availableCondition() && rootOptions.futureRef<Boolean>("show_panel").getNow(null)?.pendingValue() ?: true }
                 }
 
+                rootOptions.registerLabel("comment_scheme")
+                rootOptions.register<Boolean>("show_on_xaero_map") {
+                    controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
+                    binding(true, config.panel::showOnXaeroMap, config.panel::showOnXaeroMap::set)
+                    descriptionBuilder {
+                        addDefaultText(1)
+                    }
+                    available { FabricLoader.getInstance().isModLoaded("xaeroworldmap") }
+                }
+                rootOptions.register<Boolean>("show_on_xaero_minimap") {
+                    controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
+                    binding(true, config.panel::showOnXaeroMinimap, config.panel::showOnXaeroMinimap::set)
+                    descriptionBuilder {
+                        addDefaultText(1)
+                    }
+                    available { FabricLoader.getInstance().isModLoaded("xaerominimap") }
+                }
+
+                rootOptions.registerLabel("space_0", Component.empty())
+                rootOptions.registerLabel("comment_panel")
                 rootOptions.register<Boolean>("show_panel") {
                     controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
                     addListener { option, _ ->
