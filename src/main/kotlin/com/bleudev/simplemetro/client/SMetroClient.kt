@@ -2,9 +2,11 @@ package com.bleudev.simplemetro.client
 
 import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.announcement.client.StationAnnouncementClient
+import com.bleudev.simplemetro.client.config.SMetroConfig
 import com.bleudev.simplemetro.client.render.LinePanelRenderer
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
+import com.bleudev.simplemetro.compat.ModCompat
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundMetroInfoSync
@@ -17,6 +19,7 @@ import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
@@ -32,6 +35,12 @@ class SMetroClient : ClientModInitializer {
 
     override fun onInitializeClient() {
         SMetroPacketPayloads.initializeClient()
+
+        ClientLifecycleEvents.CLIENT_STARTED.register {
+            if (FabricLoader.getInstance().isModLoaded("modmenu")) {
+                ModCompat.MODMENU.initialize(SMetroConfig)
+            }
+        }
 
         ClientPlayConnectionEvents.JOIN.register { l, _, mc ->
             hadActiveRoute = false

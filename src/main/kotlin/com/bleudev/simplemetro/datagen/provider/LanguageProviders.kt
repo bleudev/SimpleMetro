@@ -1,9 +1,19 @@
 package com.bleudev.simplemetro.datagen.provider
 
+import com.bleudev.simplemetro.client.config.SMetroConfig.SerializableConfig.Panel.PanelPosition
+import com.bleudev.simplemetro.util.ConfigTranslationKeyBuilder
 import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricLanguageProvider
 import net.minecraft.core.HolderLookup
 import java.util.concurrent.CompletableFuture
+
+private class WrappedTranslate(private val builder: FabricLanguageProvider.TranslationBuilder) {
+    var tb = ConfigTranslationKeyBuilder.default()
+
+    fun translate(s: String, mod: ConfigTranslationKeyBuilder.() -> ConfigTranslationKeyBuilder = {this}) {
+        builder.add(tb.mod().toString(), s)
+    }
+}
 
 class SMetroDefaultLanguage(output: FabricPackOutput, registryLookup: CompletableFuture<HolderLookup.Provider>) : FabricLanguageProvider(output, registryLookup) {
     override fun generateTranslations(registryLookup: HolderLookup.Provider, builder: TranslationBuilder) {
@@ -46,6 +56,27 @@ class SMetroDefaultLanguage(output: FabricPackOutput, registryLookup: Completabl
 
         builder.add("smetro.voicechat.category.announcements", "Announcements")
         builder.add("smetro.voicechat.category.announcements.description", "Metro Announcements")
+
+        WrappedTranslate(builder).run {
+            tb = tb.category("root")
+            translate("Simple Metro Config")
+            translate("Config of Simple Metro mod") {description()}
+
+            tb = tb.root()
+            tb = tb.option("show_panel")
+            translate("Show panel")
+            translate("Show panel during transportation") {description()}
+            tb = tb.option("panel_position")
+            translate("Panel position")
+            translate("Panel position") {description()}
+
+            translate("Top left") {enum(PanelPosition.TOP_LEFT)}
+            translate("Top") {enum(PanelPosition.TOP)}
+            translate("Top right") {enum(PanelPosition.TOP_RIGHT)}
+            translate("Bottom left") {enum(PanelPosition.BOTTOM_LEFT)}
+            translate("Bottom") {enum(PanelPosition.BOTTOM)}
+            translate("Bottom right") {enum(PanelPosition.BOTTOM_RIGHT)}
+        }
     }
 }
 
@@ -90,6 +121,27 @@ class SMetroRussianLanguage(output: FabricPackOutput, registryLookup: Completabl
 
         builder.add("smetro.voicechat.category.announcements", "Оповещения")
         builder.add("smetro.voicechat.category.announcements.description", "Оповещения в метро")
+
+        WrappedTranslate(builder).run {
+            tb = tb.category("root")
+            translate("Конфиг Simple Metro")
+            translate("Конфиг мода Simple Metro") {description()}
+
+            tb = tb.root()
+            tb = tb.option("show_panel")
+            translate("Показать панель")
+            translate("Показать панель во время движения") {description()}
+            tb = tb.option("panel_position")
+            translate("Позиция панели")
+            translate("Позиция панели") {description()}
+
+            translate("Вверху слева") {enum(PanelPosition.TOP_LEFT)}
+            translate("Вверху") {enum(PanelPosition.TOP)}
+            translate("Вверху справа") {enum(PanelPosition.TOP_RIGHT)}
+            translate("Снизу слева") {enum(PanelPosition.BOTTOM_LEFT)}
+            translate("Снизу") {enum(PanelPosition.BOTTOM)}
+            translate("Снизу справа") {enum(PanelPosition.BOTTOM_RIGHT)}
+        }
     }
 }
 
@@ -134,5 +186,26 @@ class SMetroPreReformRussianLanguage(output: FabricPackOutput, registryLookup: C
 
         builder.add("smetro.voicechat.category.announcements", "Оповѣщенія")
         builder.add("smetro.voicechat.category.announcements.description", "Оповѣщенія въ метро")
+
+        WrappedTranslate(builder).run {
+            tb = tb.category("root")
+            translate("Конфиг Simple Metro") // TODO: rpr
+            translate("Конфиг мода Simple Metro") {description()} // TODO: rpr
+
+            tb = tb.root()
+            tb = tb.option("show_panel")
+            translate("Показать панель") // TODO: rpr
+            translate("Показать панель во время движения") {description()} // TODO: rpr
+            tb = tb.option("panel_position")
+            translate("Позиция панели") // TODO: rpr
+            translate("Позиция панели") {description()} // TODO: rpr
+
+            translate("Вверху слева") {enum(PanelPosition.TOP_LEFT)} // TODO: rpr
+            translate("Вверху") {enum(PanelPosition.TOP)} // TODO: rpr
+            translate("Вверху справа") {enum(PanelPosition.TOP_RIGHT)} // TODO: rpr
+            translate("Снизу слева") {enum(PanelPosition.BOTTOM_LEFT)} // TODO: rpr
+            translate("Снизу") {enum(PanelPosition.BOTTOM)} // TODO: rpr
+            translate("Снизу справа") {enum(PanelPosition.BOTTOM_RIGHT)} // TODO: rpr
+        }
     }
 }

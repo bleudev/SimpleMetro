@@ -19,10 +19,7 @@ base {
 val targetJavaVersion = 25
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-    // if it is present.
-    // If you remove this line, sources will not be generated.
-    withSourcesJar()
+//    withSourcesJar()
 }
 
 
@@ -62,6 +59,7 @@ dependencies {
     implementation("maven.modrinth:xaeros-minimap:${project.property("xaeros_minimap")}")
     implementation(files("libs/xaerolib-fabric-26.3-1.7.17.jar"))
 
+    implementation("maven.modrinth:yacl:${project.property("yacl")}")
     implementation("maven.modrinth:modmenu:21.0.0")
     compileOnly("maven.modrinth:simple-voice-chat:${project.property("simple_voice_chat")}")
 

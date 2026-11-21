@@ -2,16 +2,23 @@ package com.bleudev.simplemetro.compat
 
 internal object ModCompat {
     val SVC = CompatRef<SVCCompat>()
+    val MODMENU = CompatRef<ModMenuCompat>()
 
-    class CompatRef<T>(var present: Boolean = false, private var ref: T? = null) {
+    class CompatRef<T>(present: Boolean = false, private var ref: T? = null) {
+        var present: Boolean = present
+            private set
+
         fun initialize(impl: T) {
             if (!this.present) {
                 this.present = true
                 this.ref = impl
             }
         }
+        fun getOrNull(): T? {
+            return if (this.present) this.ref!! else null
+        }
         fun get(): T {
-            return if (this.present) this.ref!! else throw NullPointerException()
+            return getOrNull() ?: throw NullPointerException()
         }
         fun reset() {
             this.present = false

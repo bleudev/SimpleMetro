@@ -1,6 +1,7 @@
 package com.bleudev.simplemetro.client.render
 
 import com.bleudev.simplemetro.SMetro
+import com.bleudev.simplemetro.client.config.SMetroConfig
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.SMetroInfo
@@ -28,9 +29,9 @@ import kotlin.math.sin
 internal object LinePanelRenderer {
     private val BG_TEXTURE = SMetro.resolve("panel_bg")
 
-    private const val PANEL_WIDTH = 176
-    private const val PANEL_HEIGHT = 78
-    private const val PANEL_MARGIN = 7
+    internal const val PANEL_WIDTH = 176
+    internal const val PANEL_HEIGHT = 78
+    internal const val PANEL_MARGIN = 7
     private const val MAX_ROUTE_STATIONS = 6
 
     private const val PANEL_IN_DURATION_MS = 230f
@@ -138,18 +139,21 @@ internal object LinePanelRenderer {
 
         if (panelVisibility > 0.001f && tableRenderState != null) {
             val alpha = easeOutCubic(panelVisibility)
-            val x = (extractor.guiWidth() - PANEL_WIDTH - PANEL_MARGIN).coerceAtLeast(4)
-            val y = PANEL_MARGIN
-            val slide = ((1f - alpha) * (PANEL_WIDTH + 12)).roundToInt()
+
+            val (x, y) = SMetroConfig.load().panel.position.position(extractor.guiWidth(), extractor.guiHeight(), alpha)
+
+//            val x = (extractor.guiWidth() - PANEL_WIDTH - PANEL_MARGIN).coerceAtLeast(4)
+//            val y = PANEL_MARGIN
+//            val slide = ((1f - alpha) * (PANEL_WIDTH + 12)).roundToInt()
             if (panelTransition != null && toastAlpha <= 0.001f) {
                 val progress = ((nowMs - panelTransition!!.startedAtMs).toFloat() / PANEL_MODE_TRANSITION_MS)
                     .coerceIn(0f, 1f)
                 if (progress >= 1f) {
                     panelTransition = null
-                    drawPanel(extractor, x + slide, y, tableRenderState!!, storage.stationProgress, alpha, alpha)
+                    drawPanel(extractor, x, y, tableRenderState!!, storage.stationProgress, alpha, alpha)
                 } else {
-                    drawPanel(extractor, x + slide, y, panelTransition!!.from, storage.stationProgress, alpha, alpha * (1f - progress))
-                    drawPanel(extractor, x + slide, y, panelTransition!!.to, storage.stationProgress, alpha, alpha * progress)
+                    drawPanel(extractor, x, y, panelTransition!!.from, storage.stationProgress, alpha, alpha * (1f - progress))
+                    drawPanel(extractor, x, y, panelTransition!!.to, storage.stationProgress, alpha, alpha * progress)
                 }
             } else {
                 panelTransition = null
@@ -160,7 +164,7 @@ internal object LinePanelRenderer {
                 } ?: alpha
                 drawPanel(
                     extractor,
-                    x + slide,
+                    x,
                     y,
                     tableRenderState!!,
                     storage.stationProgress,
@@ -168,7 +172,7 @@ internal object LinePanelRenderer {
                     panelTextAlpha,
                 )
                 toast?.let { active ->
-                    drawArrivalNotificationPanel(extractor, x + slide, y, active.event, alpha * toastAlpha)
+                    drawArrivalNotificationPanel(extractor, x, y, active.event, alpha * toastAlpha)
                 }
             }
         }
@@ -262,6 +266,7 @@ internal object LinePanelRenderer {
         textAlpha: Float,
     ) {
         if (state.line == null) return
+        if (!SMetroConfig.load().panel.show) return
         val accent = state.line.color
 
         extractor.blitSprite(RenderPipelines.GUI_TEXTURED, BG_TEXTURE, x - 10, y - 10, PANEL_WIDTH + 15, PANEL_HEIGHT + 20)
@@ -364,6 +369,8 @@ internal object LinePanelRenderer {
         event: MetroClientStorage.StationEvent,
         alpha: Float,
     ) {
+        if (tableRenderState?.line == null) return
+        if (!SMetroConfig.load().panel.show) return
         val font = Minecraft.getInstance().font
         val columnX = x + 9
         val columnWidth = PANEL_WIDTH - 24

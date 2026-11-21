@@ -1,6 +1,7 @@
 package com.bleudev.simplemetro
 
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
+import kotlinx.serialization.json.Json
 import net.fabricmc.api.ModInitializer
 import net.minecraft.resources.Identifier
 import org.slf4j.Logger
@@ -19,5 +20,7 @@ class SMetro : ModInitializer {
         }
 
         val LOGGER: Logger = LoggerFactory.getLogger("SimpleMetro")
+
+        internal val JSON = Json { encodeDefaults = true; ignoreUnknownKeys = true; isLenient = true; prettyPrint = true }
     }
 }
