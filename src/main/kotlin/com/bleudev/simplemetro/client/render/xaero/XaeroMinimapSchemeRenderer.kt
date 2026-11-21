@@ -1,5 +1,6 @@
 package com.bleudev.simplemetro.client.render.xaero
 
+import com.bleudev.simplemetro.client.config.SMetroConfig
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.mojang.math.Axis
 import net.fabricmc.api.EnvType
@@ -30,6 +31,8 @@ internal object XaeroMinimapSchemeRenderer : XaeroCommonSchemeRenderer() {
         playerCoordinateScale: Double,
         dimension: Identifier,
     ) {
+        if (!SMetroConfig.load().panel.showOnXaeroMinimap) return
+
         this.zoom = zoom
         this.dim = dimension
         val coordinateMultiplier = if (backgroundCoordinateScale == 0.0) 1.0 else playerCoordinateScale / backgroundCoordinateScale

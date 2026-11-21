@@ -6,4 +6,4 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
 import net.fabricmc.loader.api.FabricLoader
 
 internal val isClientSide get() = FabricLoader.getInstance().environmentType == EnvType.CLIENT
-internal val idModOnServer get() = ClientPlayNetworking.canSend(ServerboundMetroInfoEdit.type)
+internal val isModOnServer get() = ClientPlayNetworking.canSend(ServerboundMetroInfoEdit.type)

@@ -13,7 +13,7 @@ import net.minecraft.network.codec.StreamCodec
 import net.minecraft.util.StringRepresentable
 
 @Serializable
-data class MetroStation(val id: Int, var pos: BlockPos, var name: String, var transfers: List<Int> = listOf(), var status: Status = Status.OPEN) {
+data class MetroStation(val id: Int, var pos: BlockPos, var name: String, var transfers: List<Int> = listOf(), var status: Status = Status.OPEN, var announcements: Announcements = Announcements()) {
     @Serializable(StationStatusSerializer::class)
     enum class Status(val message: Component? = null) : StringRepresentable {
         OPEN,
@@ -47,6 +47,7 @@ data class MetroStation(val id: Int, var pos: BlockPos, var name: String, var tr
             ByteBufCodecs.STRING_UTF8, MetroStation::name,
             ByteBufCodecs.list<ByteBuf, Int>().apply(ByteBufCodecs.INT), MetroStation::transfers,
             Status.STREAM_CODEC, MetroStation::status,
+            Announcements.STREAM_CODEC, MetroStation::announcements,
             ::MetroStation
         )
     }

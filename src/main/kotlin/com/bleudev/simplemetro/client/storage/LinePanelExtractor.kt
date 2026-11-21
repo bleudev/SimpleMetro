@@ -1,7 +1,8 @@
 package com.bleudev.simplemetro.client.storage
 
+import com.bleudev.simplemetro.announcement.StationRouteResolver
 import com.bleudev.simplemetro.config.SMetroInfo
-import com.bleudev.simplemetro.config.obj.MetroStation
+import com.bleudev.simplemetro.config.obj.Announcements
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.minecraft.client.multiplayer.ClientLevel
@@ -26,6 +27,7 @@ class LinePanelExtractor private constructor() {
         val distanceVertical: Double,
         val progress: Double,
         val tangent: Vec3,
+        val distanceToNext: Double,
     ) {
         val isNearTrack: Boolean
             get() = distanceHorizontal <= TRACK_CHECK_RADIUS && distanceVertical <= TRACK_CHECK_HEIGHT
@@ -70,16 +72,26 @@ class LinePanelExtractor private constructor() {
             }
         }
 
-        val current = detectVisibleStation(info.stations, stationsById, previousCurrent, playerPos)
+        val current = StationRouteResolver.detectVisibleStation(info.stations, previousCurrent, playerPos)
 
         if (previousCurrent != current) {
-            if (previousCurrent != null) {
+            if (previousCurrent != null && current == null) {
                 stationsById[previousCurrent]?.let { station ->
                     if (!station.status.invisible) {
+                        val nextStationId = StationRouteResolver.resolveNextStation(
+                            info,
+                            station.id,
+                            playerPos,
+                            motion,
+                            activePath?.lineId ?: storage.currentLine,
+                            activePath?.direction,
+                        )?.nextStationId
                         storage.publishStationEvent(
-                            MetroClientStorage.StationEventType.DEPARTURE,
+                            Announcements.AnnouncementType.DEPARTURE,
                             station.id,
                             station.name,
+                            activePath?.lineId ?: storage.currentLine,
+                            nextStationId,
                         )
                     }
                 }
@@ -88,9 +100,10 @@ class LinePanelExtractor private constructor() {
                 stationsById[current]?.let { station ->
                     if (!station.status.invisible) {
                         storage.publishStationEvent(
-                            MetroClientStorage.StationEventType.ARRIVAL,
+                            Announcements.AnnouncementType.ARRIVAL,
                             station.id,
                             station.name,
+                            activePath?.lineId ?: storage.currentLine,
                         )
                     }
                 }
@@ -161,11 +174,18 @@ class LinePanelExtractor private constructor() {
                         ?.toFloat()
                         ?.coerceIn(0f, 1f)
                         ?: 0f
+
+                    storage.distanceToNextStation = projection
+                        ?.takeIf { it.isNearTrack }
+                        ?.distanceToNext
+                        ?.coerceAtLeast(0.0)
                 } else {
                     storage.stationProgress = 0f
+                    storage.distanceToNextStation = null
                 }
             } else {
                 storage.stationProgress = 0f
+                storage.distanceToNextStation = null
             }
             offTrackTicks = 0
             return
@@ -187,6 +207,7 @@ class LinePanelExtractor private constructor() {
             val projection = projectOnPath(path.points, playerPos, motion)
             if (projection != null && projection.isNearTrack) {
                 storage.stationProgress = projection.progress.toFloat().coerceIn(0f, 1f)
+                storage.distanceToNextStation = projection.distanceToNext
                 offTrackTicks = 0
             } else {
                 offTrackTicks++
@@ -194,47 +215,8 @@ class LinePanelExtractor private constructor() {
             }
         } else {
             storage.stationProgress = null
+            storage.distanceToNextStation = null
         }
-    }
-
-    private fun detectVisibleStation(
-        stations: List<MetroStation>,
-        stationsById: Map<Int, MetroStation>,
-        previousCurrent: Int?,
-        playerPos: Vec3,
-    ): Int? {
-        var bestId: Int? = null
-        var bestDistance = Double.POSITIVE_INFINITY
-
-        for (station in stations) {
-            if (station.status.invisible) continue
-            val pos = Vec3.atCenterOf(station.pos)
-            val horizontalDistance = pos.horizontal().distanceTo(playerPos.horizontal())
-            val verticalDistance = abs(pos.y - playerPos.y)
-            if (horizontalDistance <= STATION_ENTER_RADIUS &&
-                verticalDistance <= STATION_CHECK_HEIGHT &&
-                horizontalDistance < bestDistance
-            ) {
-                bestId = station.id
-                bestDistance = horizontalDistance
-            }
-        }
-
-        if (previousCurrent != null) {
-            val previous = stationsById[previousCurrent]
-            if (previous != null && !previous.status.invisible) {
-                val pos = Vec3.atCenterOf(previous.pos)
-                val oldDistance = pos.horizontal().distanceTo(playerPos.horizontal())
-                val oldHeight = abs(pos.y - playerPos.y)
-                if (oldDistance <= STATION_EXIT_RADIUS && oldHeight <= STATION_CHECK_HEIGHT &&
-                    (bestId == null || bestId == previousCurrent || bestDistance + STATION_SWITCH_MARGIN >= oldDistance)
-                ) {
-                    return previousCurrent
-                }
-            }
-        }
-
-        return bestId
     }
 
     private fun outgoingPaths(fromStationId: Int, info: SMetroInfo): List<TrackPath> {
@@ -414,8 +396,9 @@ class LinePanelExtractor private constructor() {
 
             if (metric < bestMetric) {
                 val progress = (lengthBefore + segmentLength * t) / totalLength
+                val distanceToNext = totalLength - (lengthBefore + segmentLength * t)
                 bestMetric = metric
-                best = Projection(horizontalDistance, verticalDistance, progress, tangent)
+                best = Projection(horizontalDistance, verticalDistance, progress, tangent, distanceToNext)
             }
             lengthBefore += segmentLength
         }
@@ -429,6 +412,7 @@ class LinePanelExtractor private constructor() {
         storage.currentLine = path?.lineId ?: fallbackLineId
         storage.nextVisibleStation = path?.toStationId
         storage.stationProgress = if (path != null) 0f else null
+        storage.distanceToNextStation = null
     }
 
     private fun clearRoute(storage: MetroClientStorage) {
@@ -438,6 +422,7 @@ class LinePanelExtractor private constructor() {
         storage.nextVisibleStation = null
         storage.currentLine = null
         storage.stationProgress = null
+        storage.distanceToNextStation = null
     }
 
     private fun reset(storage: MetroClientStorage) {
@@ -448,13 +433,10 @@ class LinePanelExtractor private constructor() {
         storage.nextVisibleStation = null
         storage.currentLine = null
         storage.stationProgress = null
+        storage.distanceToNextStation = null
     }
 
     companion object {
-        private const val STATION_ENTER_RADIUS = 7.0
-        private const val STATION_EXIT_RADIUS = 9.0
-        private const val STATION_SWITCH_MARGIN = 1.0
-        private const val STATION_CHECK_HEIGHT = 5.0
         private const val TRACK_CHECK_RADIUS = 7.0
         private const val TRACK_CHECK_HEIGHT = 5.0
         private const val OFF_TRACK_GRACE_TICKS = 8
