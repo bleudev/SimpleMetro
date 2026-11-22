@@ -2,6 +2,7 @@ package com.bleudev.simplemetro.compat
 
 internal object ModCompat {
     val SVC = CompatRef<SVCCompat>()
+    val CLIENT_SVC = CompatRef<ClientSVCCompat>()
     val MODMENU = CompatRef<ModMenuCompat>()
 
     class CompatRef<T>(present: Boolean = false, private var ref: T? = null) {

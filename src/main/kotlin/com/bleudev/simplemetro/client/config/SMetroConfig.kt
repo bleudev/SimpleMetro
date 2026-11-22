@@ -3,6 +3,7 @@ package com.bleudev.simplemetro.client.config
 import com.bleudev.simplemetro.SMetro
 import com.bleudev.simplemetro.client.config.SMetroConfig.SerializableConfig
 import com.bleudev.simplemetro.client.render.LinePanelRenderer
+import com.bleudev.simplemetro.compat.ModCompat
 import com.bleudev.simplemetro.compat.ModMenuCompat
 import com.bleudev.simplemetro.util.ConfigTranslationKeyBuilder
 import com.bleudev.simplemetro.util.file.AdvancedJsonReader
@@ -53,7 +54,11 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
             enum class PanelPosition : NameableEnum {
                 TOP_LEFT {
                     override fun position(guiWidth: Int, guiHeight: Int, slide: Float): Pair<Int, Int> {
-                        return start(P_WIDTH, slide) to start(P_HEIGHT, 1f)
+                        var dx = 0
+                        if (ModCompat.CLIENT_SVC.getOrNull()?.isInGroup() == true) {
+                            dx += 20
+                        }
+                        return start(P_WIDTH, slide) + dx to start(P_HEIGHT, 1f)
                     }
                 }, TOP {
                     override fun position(guiWidth: Int, guiHeight: Int, slide: Float): Pair<Int, Int> {

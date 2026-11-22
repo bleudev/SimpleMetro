@@ -7,6 +7,7 @@ import com.bleudev.simplemetro.client.render.LinePanelRenderer
 import com.bleudev.simplemetro.client.storage.MetroClientStorage
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.compat.ModCompat
+import com.bleudev.simplemetro.compat.svc.ClientSVCCompatImpl
 import com.bleudev.simplemetro.config.SMetroInfo
 import com.bleudev.simplemetro.custom.SMetroPacketPayloads
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ClientboundMetroInfoSync
@@ -37,8 +38,12 @@ class SMetroClient : ClientModInitializer {
         SMetroPacketPayloads.initializeClient()
 
         ClientLifecycleEvents.CLIENT_STARTED.register {
-            if (FabricLoader.getInstance().isModLoaded("modmenu")) {
+            val loader = FabricLoader.getInstance()
+            if (loader.isModLoaded("modmenu")) {
                 ModCompat.MODMENU.initialize(SMetroConfig)
+            }
+            if (loader.isModLoaded("voicechat")) {
+                ModCompat.CLIENT_SVC.initialize(ClientSVCCompatImpl())
             }
         }
 
