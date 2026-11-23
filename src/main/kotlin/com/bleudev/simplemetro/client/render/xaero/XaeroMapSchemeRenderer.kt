@@ -1,5 +1,6 @@
 package com.bleudev.simplemetro.client.render.xaero
 
+import com.bleudev.simplemetro.client.config.SMetroConfig
 import com.bleudev.simplemetro.client.render.components.StationLinesNameTooltipComponent
 import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.client.storage.PathSearcher
@@ -41,6 +42,8 @@ internal object XaeroMapSchemeRenderer : XaeroCommonSchemeRenderer() {
         mapScreenScale: Double,
         dimension: Identifier,
     ) {
+        if (!SMetroConfig.load().scheme.showOnXaeroMap) return
+
         this.width = extractor.guiWidth()
         this.height = extractor.guiHeight()
         this.pixelScale = pixelScale.toFloat()

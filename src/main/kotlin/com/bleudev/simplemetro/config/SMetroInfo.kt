@@ -5,10 +5,9 @@ import com.bleudev.simplemetro.client.storage.MetroSchemeExtractor
 import com.bleudev.simplemetro.config.obj.MetroLine
 import com.bleudev.simplemetro.config.obj.MetroStation
 import com.bleudev.simplemetro.custom.network.protocol.common.custom.ServerboundMetroInfoEdit
-import com.bleudev.simplemetro.util.idModOnServer
 import com.bleudev.simplemetro.util.isClientSide
+import com.bleudev.simplemetro.util.isModOnServer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
@@ -27,9 +26,8 @@ import kotlin.io.path.nameWithoutExtension
 @Serializable
 data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: List<MetroLine> = listOf()) {
     companion object {
-        private val JSON = Json { encodeDefaults = true; ignoreUnknownKeys = true; isLenient = true; prettyPrint = true }
-
         private var basePath: Path = FabricLoader.getInstance().configDir.resolve(SMetro.ID)
+        val announcementsDirectory: Path get() = basePath.resolve("announcements")
         private fun pathOf(dimension: Identifier): Path = basePath.resolve(dimension.namespace).resolve("${dimension.path}.json")
 
         private var instance: SMetroInfo? = null
@@ -38,12 +36,15 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
 
         private fun load(dim: Identifier, s: String): SMetroInfo {
             var s = s
+            if (!Files.exists(announcementsDirectory)) {
+                Files.createDirectories(announcementsDirectory)
+            }
             if (!Files.exists(pathOf(dim))) {
                 Files.createDirectories(pathOf(dim).parent)
-                s = JSON.encodeToString(SMetroInfo())
+                s = SMetro.JSON.encodeToString(SMetroInfo())
                 Files.writeString(pathOf(dim), s)
             }
-            return JSON.decodeFromString(s)
+            return SMetro.JSON.decodeFromString(s)
         }
 
         private fun load(dim: Identifier): SMetroInfo {
@@ -60,7 +61,7 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
             Files.createDirectories(basePath)
             return Files.walk(basePath).filter {
                 val f = it.toFile()
-                return@filter f.isFile && f.extension == "json"
+                return@filter f.isFile && f.extension == "json" && it.parent.parent == basePath
             }.toList().mapNotNull { if (it.parent != basePath) Identifier.fromNamespaceAndPath(it.parent.name, it.nameWithoutExtension) else null }.toList()
         }
 
@@ -68,12 +69,12 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
             if (!Files.exists(pathOf(dim))) {
                 Files.createDirectories(pathOf(dim).parent)
             }
-            Files.writeString(pathOf(dim), JSON.encodeToString(info))
+            Files.writeString(pathOf(dim), SMetro.JSON.encodeToString(info))
             if (isClientSide) MetroSchemeExtractor.rebuild(dim, info)
         }
 
         fun getInstance(dimension: Identifier): SMetroInfo {
-            return if (isClientSide && idModOnServer) {
+            return if (isClientSide && isModOnServer) {
                 syncedDimensionMap[dimension] ?: SMetroInfo()
             } else {
                 load(dimension)
@@ -81,12 +82,12 @@ data class SMetroInfo(val stations: List<MetroStation> = listOf(), val lines: Li
         }
 
         fun getInstances(): Map<Identifier, SMetroInfo> {
-            return if (isClientSide && idModOnServer) syncedDimensionMap
+            return if (isClientSide && isModOnServer) syncedDimensionMap
             else collectDimensions().associateWith { load(it) }
         }
 
         fun save(dimension: Identifier, info: SMetroInfo) {
-            if (isClientSide && idModOnServer) {
+            if (isClientSide && isModOnServer) {
                 ClientPlayNetworking.send(ServerboundMetroInfoEdit(dimension, info))
             } else {
                 internalSave(dimension, info)

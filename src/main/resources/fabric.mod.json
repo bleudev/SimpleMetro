@@ -21,6 +21,12 @@
     ],
     "main": [
       "com.bleudev.simplemetro.SMetro"
+    ],
+    "modmenu": [
+      "com.bleudev.simplemetro.client.compat.modmenu.SMetroModMenuAPI"
+    ],
+    "voicechat": [
+      "com.bleudev.simplemetro.compat.svc.SVCPlugin"
     ]
   },
   "mixins": [
