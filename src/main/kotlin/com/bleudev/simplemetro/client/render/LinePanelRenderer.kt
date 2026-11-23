@@ -338,6 +338,11 @@ internal object LinePanelRenderer {
         val distance = MetroClientStorage.getInstance().distanceToNextStation ?: return
         val time = MetroClientStorage.getInstance().timeToNextStationMillis
 
+        val c = SMetroConfig.load().panel
+        val showDist = c.showRemainingDistance
+        val showTime = c.showRemainingTime
+        if (!showDist && !showTime) return
+
         val m = Util.getMillis()
         val tick = m % NEXT_STATION_DISTANCE_TIME_TOTAL_MS
         var delta = if (tick <= NEXT_STATION_DISTANCE_TIME_TOTAL_MS / 2) {
@@ -345,7 +350,8 @@ internal object LinePanelRenderer {
         } else {
             1f - (((tick - NEXT_STATION_DISTANCE_TIME_TOTAL_MS / 2).toFloat() / NEXT_STATION_DISTANCE_TIME_FADE_MS).coerceIn(0f, 1f))
         }
-        if (time == null) delta = 1f
+        if (time == null || !showTime) delta = 1f
+        if (!showDist) delta = 0f
         if (delta > 0) drawDistance(extractor, distance.roundToInt(), alpha * delta)
         if (delta < 1 && time != null) drawTimeWithMillis(extractor, time, alpha * (1f-delta))
     }

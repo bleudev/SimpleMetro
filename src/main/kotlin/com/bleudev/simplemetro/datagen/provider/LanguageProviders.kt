@@ -65,7 +65,7 @@ class SMetroDefaultLanguage(output: FabricPackOutput, registryLookup: Completabl
             tb = tb.root()
 
             // Scheme
-            tb = tb.label("comment_scheme")
+            tb = tb.group("scheme")
             translate("Scheme")
             tb = tb.option("show_on_xaero_map")
             translate("Show on Xaero's Map")
@@ -75,7 +75,7 @@ class SMetroDefaultLanguage(output: FabricPackOutput, registryLookup: Completabl
             translate("Show panel on Xaero's Minimap") {description()}
 
             // Panel
-            tb = tb.label("comment_panel")
+            tb = tb.group("panel")
             translate("Panel")
             tb = tb.option("show_panel")
             translate("Show")
@@ -83,6 +83,12 @@ class SMetroDefaultLanguage(output: FabricPackOutput, registryLookup: Completabl
             tb = tb.option("panel_position")
             translate("Position")
             translate("Panel position") {description()}
+            tb = tb.option("show_remaining_distance")
+            translate("Show remaining distance")
+            translate("Show remaining distance to the next station") {description()}
+            tb = tb.option("show_remaining_time")
+            translate("Show remaining time")
+            translate("Show remaining time to the next station") {description()}
 
             translate("Top left") {enum(PanelPosition.TOP_LEFT)}
             translate("Top") {enum(PanelPosition.TOP)}
@@ -143,7 +149,7 @@ class SMetroRussianLanguage(output: FabricPackOutput, registryLookup: Completabl
 
             tb = tb.root()
             // Scheme
-            tb = tb.label("comment_scheme")
+            tb = tb.group("scheme")
             translate("Схема")
             tb = tb.option("show_on_xaero_map")
             translate("Показать на карте Xaero")
@@ -153,7 +159,7 @@ class SMetroRussianLanguage(output: FabricPackOutput, registryLookup: Completabl
             translate("Показать схему на Xaero's Minimap") {description()}
 
             // Panel
-            tb = tb.label("comment_panel")
+            tb = tb.group("panel")
             translate("Панель")
             tb = tb.option("show_panel")
             translate("Показать")
@@ -161,6 +167,12 @@ class SMetroRussianLanguage(output: FabricPackOutput, registryLookup: Completabl
             tb = tb.option("panel_position")
             translate("Позиция")
             translate("Позиция панели") {description()}
+            tb = tb.option("show_remaining_distance")
+            translate("Показать оставшееся расстояние")
+            translate("Показать оставшееся расстояние до следующей станции") {description()}
+            tb = tb.option("show_remaining_time")
+            translate("Показать оставшееся время")
+            translate("Показать оставшееся время до следующей станции") {description()}
 
             translate("Вверху слева") {enum(PanelPosition.TOP_LEFT)}
             translate("Вверху") {enum(PanelPosition.TOP)}
@@ -221,7 +233,7 @@ class SMetroPreReformRussianLanguage(output: FabricPackOutput, registryLookup: C
 
             tb = tb.root()
             // Scheme
-            tb = tb.label("comment_scheme")
+            tb = tb.group("scheme")
             translate("Схема")
             tb = tb.option("show_on_xaero_map")
             translate("На картѣ Xaero's World Map")
@@ -231,7 +243,7 @@ class SMetroPreReformRussianLanguage(output: FabricPackOutput, registryLookup: C
             translate("Отображать схему на мини-картѣ Xaero's Minimap") { description() }
 
             // Panel
-            tb = tb.label("comment_panel")
+            tb = tb.group("panel")
             translate("Панель")
             tb = tb.option("show_panel")
             translate("Отображать")
@@ -239,6 +251,12 @@ class SMetroPreReformRussianLanguage(output: FabricPackOutput, registryLookup: C
             tb = tb.option("panel_position")
             translate("Положеніе")
             translate("Положеніе панели на экранѣ") { description() }
+            tb = tb.option("show_remaining_distance")
+            translate("Показать оставшееся расстояние") // todo: rpr
+            translate("Показать оставшееся расстояние до следующей станции") {description()} // todo: rpr
+            tb = tb.option("show_remaining_time")
+            translate("Показать оставшееся время") // todo: rpr
+            translate("Показать оставшееся время до следующей станции") {description()} // todo: rpr
 
             translate("Сверху слѣва") { enum(PanelPosition.TOP_LEFT) }
             translate("Сверху") { enum(PanelPosition.TOP) }

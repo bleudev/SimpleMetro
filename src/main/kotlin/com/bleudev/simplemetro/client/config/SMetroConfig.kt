@@ -50,6 +50,10 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
         data class Panel(
             var show: Boolean = true,
             var position: PanelPosition = PanelPosition.TOP_RIGHT,
+            @SerialName("show_remaining_distance")
+            var showRemainingDistance: Boolean = true,
+            @SerialName("show_remaining_time")
+            var showRemainingTime: Boolean = true,
         ) {
             enum class PanelPosition : NameableEnum {
                 TOP_LEFT {
@@ -133,54 +137,76 @@ object SMetroConfig : AdvancedJsonReader<SerializableConfig>(
         return YetAnotherConfigLib(SMetro.ID) {
             save { save(config) }
             categories.register("root") {
-                val dependsOnShowPanelIds = arrayListOf<String>()
-                fun <T : Any> OptionDsl<T>.dependsOnShowPanel(availableCondition: () -> Boolean = {true}) {
-                    dependsOnShowPanelIds.add(optionId)
-                    available { availableCondition() && rootOptions.futureRef<Boolean>("show_panel").getNow(null)?.pendingValue() ?: true }
-                }
-
-                rootOptions.registerLabel("comment_scheme")
-                rootOptions.register<Boolean>("show_on_xaero_map") {
-                    controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
-                    binding(true, config.scheme::showOnXaeroMap, config.scheme::showOnXaeroMap::set)
-                    descriptionBuilder {
-                        addDefaultText(1)
-                    }
-                    available { FabricLoader.getInstance().isModLoaded("xaeroworldmap") }
-                }
-                rootOptions.register<Boolean>("show_on_xaero_minimap") {
-                    controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
-                    binding(true, config.scheme::showOnXaeroMinimap, config.scheme::showOnXaeroMinimap::set)
-                    descriptionBuilder {
-                        addDefaultText(1)
-                    }
-                    available { FabricLoader.getInstance().isModLoaded("xaerominimap") }
-                }
-
-                rootOptions.registerLabel("space_0", Component.empty())
-                rootOptions.registerLabel("comment_panel")
-                rootOptions.register<Boolean>("show_panel") {
-                    controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
-                    addListener { option, _ ->
-                        val v = option.pendingValue()
-
-                        for (id in dependsOnShowPanelIds) {
-                            rootOptions.futureRef<Any>(id).getNow(null)?.setAvailable(v)
+                groups.register("scheme") {
+                    options.register<Boolean>("show_on_xaero_map") {
+                        controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
+                        binding(true, config.scheme::showOnXaeroMap, config.scheme::showOnXaeroMap::set)
+                        descriptionBuilder {
+                            addDefaultText(1)
                         }
-
+                        available { FabricLoader.getInstance().isModLoaded("xaeroworldmap") }
                     }
-                    binding(true, config.panel::show, config.panel::show::set)
-                    descriptionBuilder {
-                        addDefaultText(1)
+                    options.register<Boolean>("show_on_xaero_minimap") {
+                        controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
+                        binding(true, config.scheme::showOnXaeroMinimap, config.scheme::showOnXaeroMinimap::set)
+                        descriptionBuilder {
+                            addDefaultText(1)
+                        }
+                        available { FabricLoader.getInstance().isModLoaded("xaerominimap") }
                     }
                 }
-                rootOptions.register<SerializableConfig.Panel.PanelPosition>("panel_position") {
-                    controller { EnumControllerBuilder.create<SerializableConfig.Panel.PanelPosition>(it)?.enumClass(SerializableConfig.Panel.PanelPosition::class.java) }
-                    binding(SerializableConfig.Panel.PanelPosition.TOP_RIGHT, config.panel::position, config.panel::position::set)
-                    descriptionBuilder {
-                        addDefaultText(1)
+
+                groups.register("panel") {
+                    val dependsOnShowPanelIds = arrayListOf<String>()
+                    fun <T : Any> OptionDsl<T>.dependsOnShowPanel(availableCondition: () -> Boolean = {true}) {
+                        dependsOnShowPanelIds.add(optionId)
+                        available { availableCondition() && options.futureRef<Boolean>("show_panel").getNow(null)?.pendingValue() ?: true }
                     }
-                    dependsOnShowPanel()
+
+                    options.register<Boolean>("show_panel") {
+                        controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
+                        addListener { option, _ ->
+                            val v = option.pendingValue()
+
+                            for (id in dependsOnShowPanelIds) {
+                                options.futureRef<Any>(id).getNow(null)?.setAvailable(v)
+                            }
+
+                        }
+                        binding(true, config.panel::show, config.panel::show::set)
+                        descriptionBuilder {
+                            addDefaultText(1)
+                        }
+                    }
+                    options.register<SerializableConfig.Panel.PanelPosition>("panel_position") {
+                        controller {
+                            EnumControllerBuilder.create<SerializableConfig.Panel.PanelPosition>(it)
+                                ?.enumClass(SerializableConfig.Panel.PanelPosition::class.java)
+                        }
+                        binding(
+                            SerializableConfig.Panel.PanelPosition.TOP_RIGHT,
+                            config.panel::position,
+                            config.panel::position::set
+                        )
+                        descriptionBuilder {
+                            addDefaultText(1)
+                        }
+                        dependsOnShowPanel()
+                    }
+                    options.register<Boolean>("show_remaining_distance") {
+                        controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
+                        binding(true, config.panel::showRemainingDistance, config.panel::showRemainingDistance::set)
+                        descriptionBuilder {
+                            addDefaultText(1)
+                        }
+                    }
+                    options.register<Boolean>("show_remaining_time") {
+                        controller { BooleanControllerBuilder.create(it).yesNoFormatter().coloured(true) }
+                        binding(true, config.panel::showRemainingTime, config.panel::showRemainingTime::set)
+                        descriptionBuilder {
+                            addDefaultText(1)
+                        }
+                    }
                 }
             }
         }.generateScreen(parent)
